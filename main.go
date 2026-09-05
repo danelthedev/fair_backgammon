@@ -97,7 +97,7 @@ func sendErr(conn *websocket.Conn, s string) {
 	b, _ := json.Marshal(map[string]string{"t": "error", "msg": s})
 	_ = conn.WriteMessage(websocket.TextMessage, b)
 }
-//go:embed web/dist
+//go:embed all:web/dist
 var dist embed.FS
 
 func main() {
