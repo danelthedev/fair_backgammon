@@ -5,14 +5,13 @@ function checkerColor(_v: number, idx: number, _top: boolean) {
   return idx % 2 === 0 ? 'tri dark' : 'tri light'
 }
 
-function Dice({ v, rolling }: { v: number; rolling: boolean }) {
+function Dice({ v, rolling, used }: { v: number; rolling: boolean; used?: boolean }) {
   const [display, setDisplay] = useState(v)
   useEffect(() => {
     if (!rolling) {
       setDisplay(v)
       return
     }
-    // ponytail: random faces while rotating, then snap to real value
     setDisplay(Math.floor(Math.random() * 6) + 1)
     const id = setInterval(() => setDisplay(Math.floor(Math.random() * 6) + 1), 65)
     return () => clearInterval(id)
@@ -28,7 +27,7 @@ function Dice({ v, rolling }: { v: number; rolling: boolean }) {
   }
   const dots = map[cur] || []
   return (
-    <div className={`die ${rolling ? 'rolling' : ''}`}>
+    <div className={`die ${rolling ? 'rolling' : ''} ${used ? 'used' : ''}`}>
       {Array.from({ length: 9 }).map((_, i) => (
         <span key={i} className={`pip-dot ${dots.includes(i) ? 'on' : ''}`} />
       ))}
@@ -443,7 +442,17 @@ export function Board({ code, username, onLeave }: { code: string; username: str
 
   const canConfirm = pending.length > 0 && !hasAnyLegal()
   const showDice = server.dice[0] !== 0
-
+  const isDouble = showDice && server.dice[0] === server.dice[1]
+  const diceValues = isDouble ? (Array(4).fill(server.dice[0]) as number[]) : ([...server.dice] as number[])
+  const remainingForDice = [...movesLeft]
+  const diceUsed = diceValues.map(v => {
+    const idx = remainingForDice.indexOf(v)
+    if (idx !== -1) {
+      remainingForDice.splice(idx, 1)
+      return false
+    }
+    return true
+  })
   const renderPoint = (idx: number, top: boolean) => {
     const count = display.board[idx]
     const abs = Math.abs(count)
@@ -514,15 +523,16 @@ export function Board({ code, username, onLeave }: { code: string; username: str
         <div className="half left">
           <div className="row top">{topLeft.map(i => renderPoint(i, true))}</div>
           <div className="diceMid">
-            {showDice ? (
-              <div className="dicePair">
-                <Dice v={server.dice[0]} rolling={rolling} />
-                <Dice v={server.dice[1]} rolling={rolling} />
-              </div>
-            ) : (
-              <div className="dicePlaceholder">—</div>
-            )}
-          </div>
+              {showDice ? (
+                <div className={`dicePair ${isDouble ? 'double' : ''}`}>
+                  {diceValues.map((v, i) => (
+                    <Dice key={i} v={v} rolling={rolling} used={diceUsed[i]} />
+                  ))}
+                </div>
+              ) : (
+                <div className="dicePlaceholder">—</div>
+              )}
+            </div>
           <div className="row bottom">{botLeft.map(i => renderPoint(i, false))}</div>
         </div>
 

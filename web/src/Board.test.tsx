@@ -144,7 +144,30 @@ describe('Board', () => {
       server: mockServer({ dice: [3, 3], hasRolled: true }),
       local: { board: Array(24).fill(0), bar: [0, 0], off: [0, 0] },
       pending: [],
-      movesLeft: [3, 3],
+      movesLeft: [3, 3, 3, 3],
+      roll: vi.fn(),
+      confirm: vi.fn(),
+      undo: vi.fn(),
+      addMove: vi.fn(),
+      error: null,
+      winner: null,
+      myTurn: true,
+    })
+    const { container } = render(<Board code="TEST" username="alice" onLeave={() => {}} />)
+    expect(container.querySelectorAll('.die').length).toBe(4)
+    expect(container.querySelectorAll('.pip-dot.on').length).toBeGreaterThan(0)
+    // 4 dice for double, none used yet
+    expect(container.querySelectorAll('.die.used').length).toBe(0)
+  })
+
+  it('dice used gray and double 4', () => {
+    const board = Array(24).fill(0)
+    board[5] = 5
+    mockUseGame.mockReturnValue({
+      server: mockServer({ dice: [3, 4], hasRolled: true }),
+      local: { board, bar: [0, 0], off: [0, 0] },
+      pending: [{ from: 5, to: 2, die: 3 }],
+      movesLeft: [4],
       roll: vi.fn(),
       confirm: vi.fn(),
       undo: vi.fn(),
@@ -155,6 +178,23 @@ describe('Board', () => {
     })
     const { container } = render(<Board code="TEST" username="alice" onLeave={() => {}} />)
     expect(container.querySelectorAll('.die').length).toBe(2)
-    expect(container.querySelectorAll('.pip-dot.on').length).toBeGreaterThan(0)
+    expect(container.querySelectorAll('.die.used').length).toBe(1)
+    // double with 2 used
+    mockUseGame.mockReturnValue({
+      server: mockServer({ dice: [2, 2], hasRolled: true }),
+      local: { board, bar: [0, 0], off: [0, 0] },
+      pending: [{ from: 5, to: 3, die: 2 }, { from: 3, to: 1, die: 2 }],
+      movesLeft: [2, 2],
+      roll: vi.fn(),
+      confirm: vi.fn(),
+      undo: vi.fn(),
+      addMove: vi.fn(),
+      error: null,
+      winner: null,
+      myTurn: true,
+    })
+    const { container: c2 } = render(<Board code="TEST" username="alice" onLeave={() => {}} />)
+    expect(c2.querySelectorAll('.die').length).toBe(4)
+    expect(c2.querySelectorAll('.die.used').length).toBe(2)
   })
 })

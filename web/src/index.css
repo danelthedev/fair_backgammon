@@ -74,6 +74,9 @@ body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--whi
 .movesLeft{font-size:.75rem;opacity:.6;font-family:monospace}
 .die{width:48px;height:48px;background:#fff;border-radius:8px;border:2px solid #111;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:6px;gap:2px;box-shadow:0 3px 10px rgba(0,0,0,.4)}
 .die.rolling{animation:roll 0.6s ease}
+.die.used{opacity:0.45;filter:grayscale(0.6) brightness(0.85);transform:scale(0.96)}
+.dicePair.double{gap:8px}
+.dicePair.double .die{width:40px;height:40px;padding:4px;gap:1px}
 @keyframes roll{0%{transform:rotate(0) scale(1)}25%{transform:rotate(90deg) scale(1.1)}50%{transform:rotate(180deg) scale(0.95)}75%{transform:rotate(270deg) scale(1.05)}100%{transform:rotate(360deg) scale(1)}}
 .pip-dot{width:8px;height:8px;border-radius:50%;background:#111;opacity:0;justify-self:center;align-self:center}
 .pip-dot.on{opacity:1}
