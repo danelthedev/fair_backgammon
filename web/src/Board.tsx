@@ -6,6 +6,18 @@ function checkerColor(_v: number, idx: number, _top: boolean) {
 }
 
 function Dice({ v, rolling }: { v: number; rolling: boolean }) {
+  const [display, setDisplay] = useState(v)
+  useEffect(() => {
+    if (!rolling) {
+      setDisplay(v)
+      return
+    }
+    // ponytail: random faces while rotating, then snap to real value
+    setDisplay(Math.floor(Math.random() * 6) + 1)
+    const id = setInterval(() => setDisplay(Math.floor(Math.random() * 6) + 1), 65)
+    return () => clearInterval(id)
+  }, [rolling, v])
+  const cur = rolling ? display : v
   const map: Record<number, number[]> = {
     1: [4],
     2: [0, 8],
@@ -14,7 +26,7 @@ function Dice({ v, rolling }: { v: number; rolling: boolean }) {
     5: [0, 2, 4, 6, 8],
     6: [0, 2, 3, 5, 6, 8],
   }
-  const dots = map[v] || []
+  const dots = map[cur] || []
   return (
     <div className={`die ${rolling ? 'rolling' : ''}`}>
       {Array.from({ length: 9 }).map((_, i) => (
@@ -30,6 +42,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   const [hover, setHover] = useState<number | null>(null)
   const [rolling, setRolling] = useState(false)
   const prevHasRolled = useRef(false)
+  const isFirstRollRender = useRef(true)
   const boardRef = useRef<HTMLDivElement>(null)
   const prevServer = useRef<typeof server>(null)
   const [animBoard, setAnimBoard] = useState<{ board: number[]; bar: number[]; off: number[] } | null>(null)
@@ -37,6 +50,11 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   const [fly, setFly] = useState<{ x: number; y: number; color: string; visible: boolean; from: number } | null>(null)
   const animating = !!animBoard
   useEffect(() => {
+    if (isFirstRollRender.current) {
+      isFirstRollRender.current = false
+      prevHasRolled.current = !!server?.hasRolled
+      return
+    }
     if (server?.hasRolled && !prevHasRolled.current) {
       setRolling(true)
       const t = setTimeout(() => setRolling(false), 600)
@@ -219,7 +237,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
 
   const source = selected !== null ? selected : hover
   const combinedMap = (() => {
-    if (animating || source === null || !myTurn || !server.hasRolled) return new Map<number, { from: number; to: number; die: number }[]>()
+    if (animating || rolling || source === null || !myTurn || !server.hasRolled) return new Map<number, { from: number; to: number; die: number }[]>()
     const map = new Map<number, { from: number; to: number; die: number }[]>()
     const dice = [...movesLeft]
     if (dice.length < 2) return map
@@ -331,7 +349,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   })()
 
   const validDests = new Set<number>()
-  if (source !== null && myTurn && server.hasRolled && !animating) {
+  if (source !== null && myTurn && server.hasRolled && !animating && !rolling) {
     movesLeft.forEach(d => {
       for (let to = -2; to < 24; to++) {
         if (to === -1) continue
@@ -342,7 +360,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   }
 
   const handleSelect = (from: number) => {
-    if (animating) return
+    if (animating || rolling) return
     if (!myTurn || !server.hasRolled) return
     if (selected === from) {
       setSelected(null)
@@ -370,7 +388,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   }
 
   const handleDest = (to: number) => {
-    if (animating) return
+    if (animating || rolling) return
     if (selected === null) return
     if (combinedMap.has(to)) {
       const seq = combinedMap.get(to)!
@@ -390,7 +408,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
 
   // ponytail: right-click = biggest single-die legal move from that column
   const handleRightClick = (from: number) => {
-    if (animating) return
+    if (animating || rolling) return
     if (!myTurn || !server.hasRolled) return
     if (from === -1) {
       if (local.bar[myIdx] === 0) return
@@ -560,7 +578,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
         </div>
       </div>
       <div className="sideBtn">
-        {!winner && myTurn && !server.hasRolled && server.players[0] && server.players[1] ? (
+        {!winner && myTurn && !server.hasRolled && !animating && !rolling && server.players[0] && server.players[1] ? (
           <button className="btn primary large" onClick={roll}>Roll</button>
         ) : !winner && pending.length > 0 ? (
           <button className="btn ghost large" onClick={undo}>Undo</button>
