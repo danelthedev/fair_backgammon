@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGame } from './useGame'
+import { useSettings } from './useSettings'
 
 function checkerColor(_v: number, idx: number, _top: boolean) {
   return idx % 2 === 0 ? 'tri dark' : 'tri light'
@@ -36,7 +37,8 @@ function Dice({ v, rolling, used }: { v: number; rolling: boolean; used?: boolea
 }
 
 export function Board({ code, username, onLeave }: { code: string; username: string; onLeave: () => void }) {
-  const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, myTurn, scores, rematch, requestRematch, requestResign } = useGame(code, username)
+  const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, myTurn, scores, rematch, requestRematch, requestResign, connectionError } = useGame(code, username)
+  const { settings } = useSettings()
   const [selected, setSelected] = useState<number | null>(null)
   const [hover, setHover] = useState<number | null>(null)
   const [rolling, setRolling] = useState(false)
@@ -168,6 +170,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     return () => { cancelled = true }
   }, [animMoves])
 
+  if (connectionError) return <div className="boardWrap loading"><div className="error">{connectionError}</div><button className="btn small ghost" onClick={onLeave} style={{ marginTop: 12 }}>Back to lobby</button></div>
   if (!server || !local) return <div className="boardWrap loading">connecting...</div>
 
   const display = animBoard ?? local
@@ -349,7 +352,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
 
   const validDests = new Set<number>()
   if (source !== null && myTurn && server.hasRolled && !animating && !rolling) {
-    movesLeft.forEach(d => {
+    movesLeft.forEach((d: number) => {
       for (let to = -2; to < 24; to++) {
         if (to === -1) continue
         if (isLegal(source, to, d)) validDests.add(to)
@@ -445,7 +448,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   const isDouble = showDice && server.dice[0] === server.dice[1]
   const diceValues = isDouble ? (Array(4).fill(server.dice[0]) as number[]) : ([...server.dice] as number[])
   const remainingForDice = [...movesLeft]
-  const diceUsed = diceValues.map(v => {
+  const diceUsed = diceValues.map((v: number) => {
     const idx = remainingForDice.indexOf(v)
     if (idx !== -1) {
       remainingForDice.splice(idx, 1)
@@ -474,12 +477,16 @@ export function Board({ code, username, onLeave }: { code: string; username: str
         onMouseEnter={() => setHover(idx)}
         onMouseLeave={() => setHover(null)}
         onClick={() => {
-          if (selected !== null && validDests.has(idx)) handleDest(idx)
+          if (settings.swapClicks) handleRightClick(idx)
+          else if (selected !== null && validDests.has(idx)) handleDest(idx)
           else handleSelect(idx)
         }}
         onContextMenu={e => {
           e.preventDefault()
-          handleRightClick(idx)
+          if (settings.swapClicks) {
+            if (selected !== null && validDests.has(idx)) handleDest(idx)
+            else handleSelect(idx)
+          } else handleRightClick(idx)
         }}
       >
         <div className={`dot ${showDot ? 'show' : ''}`} />

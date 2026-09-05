@@ -23,7 +23,9 @@ export function useGame(code: string, username: string) {
   const [pending, setPending] = useState<Move[]>([])
   const [error, setError] = useState<string | null>(null)
   const [winner, setWinner] = useState<string | null>(null)
+  const [connectionError, setConnectionError] = useState<string | null>(null)
   useEffect(() => { serverRef.current = server }, [server])
+
 
   // local board derived from server + pending
   const local = (() => {
@@ -71,9 +73,13 @@ export function useGame(code: string, username: string) {
   })()
 
   useEffect(() => {
+    setConnectionError(null)
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
     const ws = new WebSocket(`${proto}//${location.host}/ws?code=${code}`)
     wsRef.current = ws
+    const timeout = setTimeout(() => {
+      if (!serverRef.current) setConnectionError("Connection timeout: room may have expired or was closed")
+    }, 5000)
     ws.onmessage = (e) => {
       try {
         const msg = JSON.parse(e.data)
@@ -92,9 +98,10 @@ export function useGame(code: string, username: string) {
             scores: msg.scores || [0, 0],
             rematch: msg.rematch || [false, false],
           })
+          clearTimeout(timeout)
+          setConnectionError(null)
           // clear winner when new game starts (rematch)
           if (msg.scores && msg.rematch && !msg.rematch[0] && !msg.rematch[1] && msg.board) {
-            // if board is fresh and no one has won yet, clear winner
             const off0 = msg.off?.[0] ?? 0
             const off1 = msg.off?.[1] ?? 0
             if (off0 < 15 && off1 < 15) setWinner(null)
@@ -108,15 +115,25 @@ export function useGame(code: string, username: string) {
           setWinner(name)
           setError(`${name} wins!`)
         } else if (msg.t === 'rematch') {
-          // rematch vote update comes via state, but also handle direct
           if (msg.scores) {
             setServer(s => s ? { ...s, scores: msg.scores, rematch: msg.rematch } : s)
           }
         }
       } catch {}
     }
+    ws.onerror = () => {
+      clearTimeout(timeout)
+      setConnectionError("Failed to connect: room not found or server error")
+    }
+    ws.onclose = () => {
+      clearTimeout(timeout)
+      if (!serverRef.current) setConnectionError(prev => prev ?? "Connection closed: room may have expired")
+    }
     ws.onopen = () => {}
-    return () => ws.close()
+    return () => {
+      clearTimeout(timeout)
+      ws.close()
+    }
   }, [code])
 
   useEffect(() => {
@@ -147,5 +164,5 @@ export function useGame(code: string, username: string) {
   const scores = server?.scores ?? [0, 0] as [number, number]
   const rematch = server?.rematch ?? [false, false] as [boolean, boolean]
 
-  return { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, myTurn, myIdx, send, scores, rematch, requestRematch, requestResign }
+  return { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, myTurn, myIdx, send, scores, rematch, requestRematch, requestResign, connectionError }
 }
