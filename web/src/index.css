@@ -80,16 +80,19 @@ body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--whi
 @keyframes roll{0%{transform:rotate(0) scale(1)}25%{transform:rotate(90deg) scale(1.1)}50%{transform:rotate(180deg) scale(0.95)}75%{transform:rotate(270deg) scale(1.05)}100%{transform:rotate(360deg) scale(1)}}
 .pip-dot{width:8px;height:8px;border-radius:50%;background:#111;opacity:0;justify-self:center;align-self:center}
 .pip-dot.on{opacity:1}
-.sideBtn{position:absolute;right:-32px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:15}
-.offTray{position:absolute;left:42px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:16px;z-index:14}
+.sideBtn{position:absolute;right:-32px;top:50%;transform:translateY(-50%);display:block;width:96px;height:120px;z-index:15}
+.sideBtn .btn{position:absolute;left:50%;transform:translateX(-50%)}
+.sideBtn .btn:nth-child(1){top:0}
+.sideBtn .btn:nth-child(2){top:64px}
+.offTray{position:absolute;left:42px;top:calc(50% + 20px);transform:translateY(-50%);display:flex;flex-direction:column;gap:16px;z-index:14}
 .offTray.trough{background:linear-gradient(180deg, color-mix(in srgb, var(--exterior) 85%, #2b1a0e), var(--exterior));border:2px solid color-mix(in srgb, var(--exterior) 70%, #4a2e16);border-radius:12px;padding:12px 6px;box-shadow:inset 0 0 12px rgba(0,0,0,.6),0 4px 12px rgba(0,0,0,.4);height:740px;max-height:90vh;min-width:42px;align-items:center;justify-content:space-between;overflow:hidden}
 .troughInner{display:flex;flex-direction:column;gap:12px;align-items:center;width:100%;flex:1;justify-content:space-between;padding:8px 0;overflow:visible;min-height:0}
 .offStack{display:flex;flex-direction:column;gap:2px;align-items:center;min-height:60px;width:100%;flex:0 1 auto;overflow:visible;max-height:none}
 .offStack.white-trough{justify-content:flex-start}
 .offStack.black-trough{justify-content:flex-end}
 .troughCenter{height:48px;min-height:48px;width:36px;border:1px dashed rgba(215,196,165,.22);border-radius:6px;flex-shrink:0}
-.checker.small{width:20px;height:20px}
-.offStack .checker.small:not(:first-child){margin-top:-6px}
+.checker.small{width:26px;height:26px}
+.offStack .checker.small:not(:first-child){margin-top:-4px}
 .checker.fly{position:absolute;z-index:30;pointer-events:none;transition: left .38s ease, top .38s ease;box-shadow:0 8px 18px rgba(0,0,0,.6),inset 0 2px 3px rgba(255,255,255,.45)}
 .boardWrap{position:relative}
 @media(max-width:1100px){.boardWrap{padding:1rem}.sideBtn{position:static;transform:none;flex-direction:row;justify-content:center;margin:1rem auto}.playerRail{position:static;transform:none;flex-direction:row;justify-content:center;margin:.6rem auto}.offTray{position:static;transform:none;flex-direction:row;justify-content:center;margin:1rem auto;min-height:auto}}

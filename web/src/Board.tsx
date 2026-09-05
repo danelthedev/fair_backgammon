@@ -530,16 +530,16 @@ export function Board({ code, username, onLeave }: { code: string; username: str
         <div className="half left">
           <div className="row top">{topLeft.map(i => renderPoint(i, true))}</div>
           <div className="diceMid">
-              {showDice ? (
-                <div className={`dicePair ${isDouble ? 'double' : ''}`}>
-                  {diceValues.map((v, i) => (
-                    <Dice key={i} v={v} rolling={rolling} used={diceUsed[i]} />
-                  ))}
-                </div>
-              ) : (
-                <div className="dicePlaceholder">—</div>
-              )}
-            </div>
+            {showDice ? (
+              <div className={`dicePair ${isDouble ? 'double' : ''}`}>
+                {diceValues.map((v, i) => (
+                  <Dice key={i} v={v} rolling={rolling} used={diceUsed[i]} />
+                ))}
+              </div>
+            ) : (
+              <div className="dicePlaceholder">—</div>
+            )}
+          </div>
           <div className="row bottom">{botLeft.map(i => renderPoint(i, false))}</div>
         </div>
 
