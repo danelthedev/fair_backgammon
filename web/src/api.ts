@@ -14,6 +14,10 @@ export async function createLobby(): Promise<string> {
   const j = await r.json()
   return j.code
 }
+export async function leaveLobby(code: string): Promise<void> {
+  await fetch(`/api/lobby/${code}/leave`, { method: 'POST', credentials: 'include' }).catch(() => {})
+}
+
 
 export async function joinLobby(code: string): Promise<void> {
   const r = await fetch(`/api/lobby/${code}/join`, { method: 'POST', credentials: 'include' })

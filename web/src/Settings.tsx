@@ -7,7 +7,6 @@ const labels: Record<string, string> = {
   triLight: 'Triangle light',
   triDark: 'Triangle dark',
   exterior: 'Exterior / border',
-  accent: 'Accent',
   whitePiece: 'White pieces',
   blackPiece: 'Black pieces',
 }

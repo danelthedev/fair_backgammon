@@ -25,8 +25,11 @@ export function useGame(code: string, username: string) {
   const [winner, setWinner] = useState<string | null>(null)
   const [connectionError, setConnectionError] = useState<string | null>(null)
   useEffect(() => { serverRef.current = server }, [server])
+  const prevPlayersRef = useRef<string[] | null>(null)
 
-
+  useEffect(() => {
+    prevPlayersRef.current = server?.players ?? null
+  }, [server?.players])
   // local board derived from server + pending
   const local = (() => {
     if (!server) return null
@@ -100,11 +103,21 @@ export function useGame(code: string, username: string) {
           })
           clearTimeout(timeout)
           setConnectionError(null)
-          // clear winner when new game starts (rematch)
           if (msg.scores && msg.rematch && !msg.rematch[0] && !msg.rematch[1] && msg.board) {
             const off0 = msg.off?.[0] ?? 0
             const off1 = msg.off?.[1] ?? 0
             if (off0 < 15 && off1 < 15) setWinner(null)
+          }
+          if ((msg.players[0] === "" || msg.players[1] === "") && msg.players.includes(username)) {
+            const oppIdx = msg.players[0] === username ? 1 : 0
+            if (msg.players[oppIdx] === "") {
+              const prev = prevPlayersRef.current
+              const wasFull = prev && prev[0] !== "" && prev[1] !== ""
+              const totalOff = (msg.off?.[0] ?? 0) + (msg.off?.[1] ?? 0)
+              if (wasFull || totalOff > 0 || msg.hasRolled) {
+                setConnectionError("Opponent left the game")
+              }
+            }
           }
           setError(null)
         } else if (msg.t === 'error') {
@@ -118,6 +131,10 @@ export function useGame(code: string, username: string) {
           if (msg.scores) {
             setServer(s => s ? { ...s, scores: msg.scores, rematch: msg.rematch } : s)
           }
+        } else if (msg.t === 'opponent_left') {
+          setConnectionError("Opponent left the game")
+          setError("Opponent left")
+          setWinner(null)
         }
       } catch {}
     }

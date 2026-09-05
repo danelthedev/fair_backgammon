@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 
 export type BoardColors = {
   boardBase: string
@@ -6,7 +7,6 @@ export type BoardColors = {
   triLight: string
   triDark: string
   exterior: string
-  accent: string
   whitePiece: string
   blackPiece: string
 }
@@ -17,7 +17,6 @@ export const defaultColors: BoardColors = {
   triLight: '#f5e6c8',
   triDark: '#8b5a2b',
   exterior: '#2b1a0e',
-  accent: '#f59e0b',
   whitePiece: '#f8fafc',
   blackPiece: '#0f0f0f',
 }
@@ -34,7 +33,18 @@ const defaultSettings: Settings = {
 
 const KEY = 'fair_backgammon_settings'
 
-export function useSettings() {
+type Ctx = {
+  settings: Settings
+  setSettings: React.Dispatch<React.SetStateAction<Settings>>
+  reset: () => void
+  update: (patch: Partial<Settings>) => void
+  updateColor: (key: keyof BoardColors, value: string) => void
+  defaultColors: BoardColors
+}
+
+const SettingsContext = createContext<Ctx | null>(null)
+
+export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(() => {
     try {
       const raw = localStorage.getItem(KEY)
@@ -45,18 +55,25 @@ export function useSettings() {
 
   useEffect(() => {
     localStorage.setItem(KEY, JSON.stringify(settings))
-    // apply CSS variables immediately
     const r = document.documentElement
     r.style.setProperty('--board-base', settings.colors.boardBase)
     r.style.setProperty('--board-field', settings.colors.boardField)
     r.style.setProperty('--tri-light', settings.colors.triLight)
     r.style.setProperty('--tri-dark', settings.colors.triDark)
     r.style.setProperty('--exterior', settings.colors.exterior)
-    r.style.setProperty('--accent', settings.colors.accent)
-    // pieces via variables too
     r.style.setProperty('--white-piece', settings.colors.whitePiece)
     r.style.setProperty('--black-piece', settings.colors.blackPiece)
   }, [settings])
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === KEY && e.newValue) {
+        try { setSettings({ ...defaultSettings, ...JSON.parse(e.newValue), colors: { ...defaultColors, ...JSON.parse(e.newValue).colors } }) } catch {}
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
 
   // apply on mount
   useEffect(() => {
@@ -66,7 +83,6 @@ export function useSettings() {
     r.style.setProperty('--tri-light', settings.colors.triLight)
     r.style.setProperty('--tri-dark', settings.colors.triDark)
     r.style.setProperty('--exterior', settings.colors.exterior)
-    r.style.setProperty('--accent', settings.colors.accent)
     r.style.setProperty('--white-piece', settings.colors.whitePiece)
     r.style.setProperty('--black-piece', settings.colors.blackPiece)
   }, [])
@@ -76,5 +92,19 @@ export function useSettings() {
   const updateColor = (key: keyof BoardColors, value: string) =>
     setSettings(s => ({ ...s, colors: { ...s.colors, [key]: value } }))
 
-  return { settings, setSettings, reset, update, updateColor, defaultColors }
+  return <SettingsContext.Provider value={{ settings, setSettings, reset, update, updateColor, defaultColors }}>{children}</SettingsContext.Provider>
+}
+
+export function useSettings() {
+  const ctx = useContext(SettingsContext)
+  if (ctx) return ctx
+  // fallback for tests without provider
+  return {
+    settings: defaultSettings,
+    setSettings: (() => {}) as any,
+    reset: () => {},
+    update: () => {},
+    updateColor: () => {},
+    defaultColors,
+  }
 }
