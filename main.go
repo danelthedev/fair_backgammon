@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"fair_backgammon/api"
@@ -126,13 +127,25 @@ func main() {
 			http.NotFound(w, r)
 			return
 		}
-		// try exact file
+		// try exact file from embedded
 		if _, err := fs.Stat(sub, strings.TrimPrefix(r.URL.Path, "/")); err == nil {
 			http.FileServer(http.FS(sub)).ServeHTTP(w, r)
 			return
 		}
+		// try filesystem (local dev / Heroku post-build)
+		if _, err := os.Stat("web/dist" + r.URL.Path); err == nil {
+			http.FileServer(http.Dir("web/dist")).ServeHTTP(w, r)
+			return
+		}
 		// fallback index
 		b, _ := fs.ReadFile(sub, "index.html")
+		if len(b) == 0 {
+			b, _ = os.ReadFile("web/dist/index.html")
+		}
+		if len(b) == 0 {
+			http.NotFound(w, r)
+			return
+		}
 		w.Header().Set("Content-Type", "text/html")
 		w.Write(b)
 	})
