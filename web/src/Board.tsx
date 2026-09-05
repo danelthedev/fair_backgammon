@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGame } from './useGame'
 
-function checkerColor(_v: number, idx: number, top: boolean) {
-  return idx % 2 === (top ? 0 : 1) ? 'tri dark' : 'tri light'
+function checkerColor(_v: number, idx: number, _top: boolean) {
+  return idx % 2 === 0 ? 'tri dark' : 'tri light'
 }
 
 function Dice({ v, rolling }: { v: number; rolling: boolean }) {
@@ -413,10 +413,15 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     }
   }
 
-  const topLeft = [12, 13, 14, 15, 16, 17]
-  const topRight = [18, 19, 20, 21, 22, 23]
-  const botLeft = [11, 10, 9, 8, 7, 6]
-  const botRight = [5, 4, 3, 2, 1, 0]
+  const isWhiteView = myIdx !== 1
+  const topLeft = isWhiteView ? [12, 13, 14, 15, 16, 17] : [11, 10, 9, 8, 7, 6]
+  const topRight = isWhiteView ? [18, 19, 20, 21, 22, 23] : [5, 4, 3, 2, 1, 0]
+  const botLeft = isWhiteView ? [11, 10, 9, 8, 7, 6] : [12, 13, 14, 15, 16, 17]
+  const botRight = isWhiteView ? [5, 4, 3, 2, 1, 0] : [18, 19, 20, 21, 22, 23]
+  const barTopIdx = isWhiteView ? 0 : 1
+  const barBottomIdx = isWhiteView ? 1 : 0
+  const offTopIdx = isWhiteView ? 0 : 1
+  const offBottomIdx = isWhiteView ? 1 : 0
 
   const canConfirm = pending.length > 0 && !hasAnyLegal()
   const showDice = server.dice[0] !== 0
@@ -498,8 +503,8 @@ export function Board({ code, username, onLeave }: { code: string; username: str
 
         <div className="barMid">
           <div
-            data-bar="0"
-            className={`barStack top ${selected === -1 && myIdx === 0 ? 'selected' : ''}`}
+            data-bar={barTopIdx}
+            className={`barStack top ${selected === -1 && myIdx === barTopIdx ? 'selected' : ''}`}
             onMouseEnter={() => setHover(-1)}
             onMouseLeave={() => setHover(null)}
             onClick={() => {
@@ -508,16 +513,16 @@ export function Board({ code, username, onLeave }: { code: string; username: str
               else handleSelect(-1)
             }}
           >
-            {Array.from({ length: display.bar[0] }).map((_, i) => {
-              const hide = animating && fly?.from === -1 && animMoves?.mover === 0 && i === display.bar[0] - 1
-              return <div key={`w${i}`} className={`checker white ${selected === -1 && myIdx === 0 ? 'selected' : ''}`} style={{ opacity: hide ? 0 : 1 }} />
+            {Array.from({ length: display.bar[barTopIdx] }).map((_, i) => {
+              const hide = animating && fly?.from === -1 && animMoves?.mover === barTopIdx && i === display.bar[barTopIdx] - 1
+              return <div key={`w${i}`} className={`checker ${barTopIdx === 0 ? 'white' : 'black'} ${selected === -1 && myIdx === barTopIdx ? 'selected' : ''}`} style={{ opacity: hide ? 0 : 1 }} />
             })}
             {selected === -1 && <div className={`dot ${validDests.has(-2) ? 'show' : ''}`} style={{ position: 'relative', top: 6 }} />}
           </div>
-          <div data-bar="1" className={`barStack bottom ${selected === -1 && myIdx === 1 ? 'selected' : ''}`} onMouseEnter={() => setHover(-1)} onMouseLeave={() => setHover(null)} onClick={() => handleSelect(-1)}>
-            {Array.from({ length: display.bar[1] }).map((_, i) => {
-              const hide = animating && fly?.from === -1 && animMoves?.mover === 1 && i === display.bar[1] - 1
-              return <div key={`b${i}`} className={`checker black ${selected === -1 && myIdx === 1 ? 'selected' : ''}`} style={{ opacity: hide ? 0 : 1 }} />
+          <div data-bar={barBottomIdx} className={`barStack bottom ${selected === -1 && myIdx === barBottomIdx ? 'selected' : ''}`} onMouseEnter={() => setHover(-1)} onMouseLeave={() => setHover(null)} onClick={() => handleSelect(-1)}>
+            {Array.from({ length: display.bar[barBottomIdx] }).map((_, i) => {
+              const hide = animating && fly?.from === -1 && animMoves?.mover === barBottomIdx && i === display.bar[barBottomIdx] - 1
+              return <div key={`b${i}`} className={`checker ${barBottomIdx === 0 ? 'white' : 'black'} ${selected === -1 && myIdx === barBottomIdx ? 'selected' : ''}`} style={{ opacity: hide ? 0 : 1 }} />
             })}
           </div>
           <div className="offMid" onClick={() => validDests.has(-2) && selected !== null && handleDest(-2)}>
@@ -534,15 +539,15 @@ export function Board({ code, username, onLeave }: { code: string; username: str
       </div>
       <div className="offTray trough">
         <div className="troughInner">
-          <div className="offStack white-trough" data-off="0">
-            {Array.from({ length: display.off[0] }).map((_, i) => (
-              <div key={`oW${i}`} className="checker white small" />
+          <div className={`offStack ${offTopIdx === 0 ? 'white-trough' : 'black-trough'}`} data-off={offTopIdx}>
+            {Array.from({ length: display.off[offTopIdx] }).map((_, i) => (
+              <div key={`o${offTopIdx}${i}`} className={`checker ${offTopIdx === 0 ? 'white' : 'black'} small`} />
             ))}
           </div>
           <div className="troughCenter" aria-hidden />
-          <div className="offStack black-trough" data-off="1">
-            {Array.from({ length: display.off[1] }).map((_, i) => (
-              <div key={`oB${i}`} className="checker black small" />
+          <div className={`offStack ${offBottomIdx === 0 ? 'white-trough' : 'black-trough'}`} data-off={offBottomIdx}>
+            {Array.from({ length: display.off[offBottomIdx] }).map((_, i) => (
+              <div key={`o${offBottomIdx}${i}`} className={`checker ${offBottomIdx === 0 ? 'white' : 'black'} small`} />
             ))}
           </div>
         </div>
