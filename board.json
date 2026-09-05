@@ -1,7 +1,0 @@
-{
-  "_comment": "Very close to win: 14 off, 1 left. White on 1 (0), Black on 24 (23). One roll to win. Delete to restore standard.",
-  "board": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1],
-  "bar": [0, 0],
-  "off": [14, 14],
-  "turn": 0
-}
