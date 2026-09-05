@@ -25,7 +25,7 @@ function Dice({ v, rolling }: { v: number; rolling: boolean }) {
 }
 
 export function Board({ code, username, onLeave }: { code: string; username: string; onLeave: () => void }) {
-  const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, myTurn, scores, rematch, requestRematch } = useGame(code, username)
+  const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, myTurn, scores, rematch, requestRematch, requestResign } = useGame(code, username)
   const [selected, setSelected] = useState<number | null>(null)
   const [hover, setHover] = useState<number | null>(null)
   const [rolling, setRolling] = useState(false)
@@ -475,7 +475,14 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     <div className="boardWrap" onContextMenu={e => e.preventDefault()}>
       <div className="topBar">
         {winner ? <span className="turn big">{winner} wins!</span> : !(server.players[0] && server.players[1]) ? <span className="codePill">{code}</span> : <span />}
-        <button className="btn small ghost" onClick={onLeave}>leave</button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {!winner && server.players[0] && server.players[1] && (
+            <button className="btn small ghost" onClick={requestResign} style={{ color: '#f87171', borderColor: '#7f1d1d' }}>
+              Resign
+            </button>
+          )}
+          <button className="btn small ghost" onClick={onLeave}>leave</button>
+        </div>
       </div>
 
       {error && <div className="error">{error}</div>}
@@ -553,7 +560,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
         </div>
       </div>
       <div className="sideBtn">
-        {!winner && myTurn && !server.hasRolled ? (
+        {!winner && myTurn && !server.hasRolled && server.players[0] && server.players[1] ? (
           <button className="btn primary large" onClick={roll}>Roll</button>
         ) : !winner && pending.length > 0 ? (
           <button className="btn ghost large" onClick={undo}>Undo</button>

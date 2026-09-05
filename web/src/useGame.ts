@@ -140,11 +140,12 @@ export function useGame(code: string, username: string) {
   const undo = () => setPending((p) => p.slice(0, -1))
   const addMove = (m: Move) => setPending((p) => [...p, m])
   const requestRematch = () => send({ t: 'rematch' })
+  const requestResign = () => send({ t: 'resign' })
 
   const myIdx = server ? server.players.indexOf(username) : -1
   const myTurn = server ? server.turn === myIdx : false
   const scores = server?.scores ?? [0, 0] as [number, number]
   const rematch = server?.rematch ?? [false, false] as [boolean, boolean]
 
-  return { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, myTurn, myIdx, send, scores, rematch, requestRematch }
+  return { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, myTurn, myIdx, send, scores, rematch, requestRematch, requestResign }
 }
