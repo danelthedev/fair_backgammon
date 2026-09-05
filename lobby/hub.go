@@ -17,6 +17,8 @@ type Room struct {
 	Game    *game.Game
 	Players [2]string // username, empty = slot free
 	LastMoves []game.Move
+	Scores    [2]int
+	Rematch   [2]bool
 
 	mu   sync.Mutex
 	subs map[chan []byte]struct{}
@@ -91,6 +93,8 @@ func (r *Room) BroadcastState() {
 		"hasRolled": r.Game.HasRolled,
 		"players":   r.Players,
 		"lastMoves": r.LastMoves,
+		"scores":    r.Scores,
+		"rematch":   r.Rematch,
 	})
 	for ch := range r.subs {
 		select {

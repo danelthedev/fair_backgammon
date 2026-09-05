@@ -42,7 +42,12 @@ func (r *Room) GameTurn(conn interface {
 	}
 	// fallback (should not hit, TurnHandler set in main init)
 	g := r.Game
-	if g.Turn != game.Player(idx) {
+	if win, _ := g.CheckWin(); win {
+		if msg.T != "rematch" {
+			sendErr("game over, request rematch")
+			return
+		}
+	} else if g.Turn != game.Player(idx) {
 		sendErr("not your turn")
 		return
 	}
@@ -61,10 +66,13 @@ func (r *Room) GameTurn(conn interface {
 		}
 		r.broadcastStateLocked()
 		if win, w := g.CheckWin(); win {
-			b, _ := json.Marshal(map[string]any{"t": "win", "winner": w})
+			r.Scores[w]++
+			r.Rematch = [2]bool{false, false}
+			b, _ := json.Marshal(map[string]any{"t": "win", "winner": w, "winnerName": r.Players[w], "scores": r.Scores})
 			for ch := range r.subs {
 				select { case ch <- b: default: }
 			}
+			r.broadcastStateLocked()
 		}
 	case "move":
 		if msg.From == nil || msg.To == nil || msg.Die == nil {
@@ -84,10 +92,13 @@ func (r *Room) GameTurn(conn interface {
 		}
 		r.broadcastStateLocked()
 		if win, w := g.CheckWin(); win {
-			b, _ := json.Marshal(map[string]any{"t": "win", "winner": w})
+			r.Scores[w]++
+			r.Rematch = [2]bool{false, false}
+			b, _ := json.Marshal(map[string]any{"t": "win", "winner": w, "winnerName": r.Players[w], "scores": r.Scores})
 			for ch := range r.subs {
 				select { case ch <- b: default: }
 			}
+			r.broadcastStateLocked()
 		}
 	case "pass":
 		if g.HasAnyLegal() {
@@ -99,6 +110,27 @@ func (r *Room) GameTurn(conn interface {
 		g.HasRolled = false
 		g.Turn = 1 - g.Turn
 		r.broadcastStateLocked()
+	case "rematch":
+		if win, _ := g.CheckWin(); !win {
+			sendErr("game not over")
+			return
+		}
+		r.Rematch[idx] = true
+		if r.Rematch[0] && r.Rematch[1] {
+			r.Game = game.NewGame()
+			r.LastMoves = nil
+			r.Rematch = [2]bool{false, false}
+			// swap colors on rematch
+			r.Players[0], r.Players[1] = r.Players[1], r.Players[0]
+			r.Scores[0], r.Scores[1] = r.Scores[1], r.Scores[0]
+			r.broadcastStateLocked()
+		} else {
+			r.broadcastStateLocked()
+			b, _ := json.Marshal(map[string]any{"t": "rematch", "rematch": r.Rematch, "scores": r.Scores})
+			for ch := range r.subs {
+				select { case ch <- b: default: }
+			}
+		}
 	default:
 		sendErr("unknown t")
 	}
@@ -108,6 +140,7 @@ func (r *Room) broadcastStateLocked() {
 	msg, _ := json.Marshal(map[string]any{
 		"t": "state", "code": r.Code, "board": r.Game.Board, "bar": r.Game.Bar, "off": r.Game.Off,
 		"turn": r.Game.Turn, "dice": r.Game.Dice, "movesLeft": r.Game.MovesLeft, "hasRolled": r.Game.HasRolled, "players": r.Players, "lastMoves": r.LastMoves,
+		"scores": r.Scores, "rematch": r.Rematch,
 	})
 	for ch := range r.subs {
 		select {

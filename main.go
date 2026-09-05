@@ -78,6 +78,15 @@ func wsHandler(hub *lobby.Hub) http.HandlerFunc {
 				}
 				continue
 			}
+			idx := room.PlayerIndex(user)
+			if idx == -1 {
+				b, _ := json.Marshal(map[string]string{"t": "error", "msg": "not in room"})
+				select {
+				case ch <- b:
+				default:
+				}
+				continue
+			}
 			room.GameTurn(conn, room, user, idx, msg, ch)
 		}
 	}

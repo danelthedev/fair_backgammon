@@ -1,0 +1,7 @@
+{
+  "_comment": "Copy to board.json to override starting position. File is read on each NewGame (each lobby). Supports {board,bar,off,turn} or bare [24] array. Default is standard backgammon.",
+  "board": [ -2, 0, 0, 0, 0, 5, 0, 3, 0, 0, 0, -5, 5, 0, 0, 0, -3, 0, -5, 0, 0, 0, 0, 2 ],
+  "bar": [0, 0],
+  "off": [0, 0],
+  "turn": 0
+}

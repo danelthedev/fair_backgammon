@@ -1,8 +1,10 @@
 package game
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
+	"os"
 )
 
 // Player 0=white moves ->0, 1=black moves ->23
@@ -32,6 +34,10 @@ type Game struct {
 }
 
 func NewGame() *Game {
+	// ponytail: try board config file, fallback to standard
+	if g := tryLoadBoard(); g != nil {
+		return g
+	}
 	g := &Game{Turn: White}
 	// white
 	g.Board[23] = 2
@@ -44,6 +50,49 @@ func NewGame() *Game {
 	g.Board[16] = -3
 	g.Board[18] = -5
 	return g
+}
+
+// tryLoadBoard tries BOARD_CONFIG env, ./board.json, ./game/board.json — ponytail: file is simplest config
+func tryLoadBoard() *Game {
+	paths := []string{}
+	if p := os.Getenv("BOARD_CONFIG"); p != "" {
+		paths = append(paths, p)
+	}
+	paths = append(paths, "board.json", "game/board.json", "config/board.json")
+	for _, p := range paths {
+		b, err := os.ReadFile(p)
+		if err != nil {
+			continue
+		}
+		// try object {board,bar,off,turn}
+		var cfg struct {
+			Board *[24]int `json:"board"`
+			Bar   *[2]int  `json:"bar"`
+			Off   *[2]int  `json:"off"`
+			Turn  *Player  `json:"turn"`
+		}
+		if err := json.Unmarshal(b, &cfg); err == nil && cfg.Board != nil {
+			g := &Game{Turn: White}
+			g.Board = *cfg.Board
+			if cfg.Bar != nil {
+				g.Bar = *cfg.Bar
+			}
+			if cfg.Off != nil {
+				g.Off = *cfg.Off
+			}
+			if cfg.Turn != nil {
+				g.Turn = *cfg.Turn
+			}
+			return g
+		}
+		// try bare [24]int
+		var arr [24]int
+		if err := json.Unmarshal(b, &arr); err == nil {
+			g := &Game{Turn: White, Board: arr}
+			return g
+		}
+	}
+	return nil
 }
 
 func (g *Game) Clone() *Game { c := *g; c.MovesLeft = append([]int(nil), g.MovesLeft...); return &c }
