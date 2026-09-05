@@ -1,5 +1,5 @@
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#1a1a1e;--card:#252529;--line:#2e2e33;--accent:#f59e0b;--accent2:#facc15;--white:#f8fafc;--board-base:#3e2723;--board-field:#0f6b3d;--tri-light:#f5e6c8;--tri-dark:#8b5a2b;--exterior:#2b1a0e;--white-piece:#f8fafc;--black-piece:#0f0f0f}
+:root{--bg:#1a1a1e;--card:#252529;--line:#2e2e33;--accent:#f59e0b;--accent2:#facc15;--white:#f8fafc;--board-base:#7a3f2a;--board-field:#e19247;--tri-light:#f4b862;--tri-dark:#9f452d;--exterior:#3e2723;--white-piece:#fffaf0;--black-piece:#1e1e1e}
 body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--white);min-height:100vh}
 .title{font-size:2.6rem;letter-spacing:-.04em;font-weight:800}
 .subtitle{opacity:.6;margin-top:.2rem}
@@ -56,10 +56,10 @@ body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--whi
 .row.top .stack{top:12px}
 .row.bottom .stack{bottom:12px;flex-direction:column-reverse}
 .stack .checker{pointer-events:auto}
-.checker{width:40px;height:40px;border-radius:50%;border:1px solid rgba(0,0,0,0.2);box-shadow:0 3px 7px rgba(0,0,0,0.32), inset 0 0 0 1px rgba(255,255,255,0.15);flex-shrink:0;transition:transform .15s}
+.checker{width:40px;height:40px;border-radius:50%;border:1px solid rgba(0,0,0,0.2);box-shadow:0 4px 10px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.15);flex-shrink:0;transition:transform .15s}
 .checker.draggable:hover{transform:translateY(-2px) scale(1.03)}
-.checker.white{background:var(--white-piece);border-color:#b8b8b8;box-shadow:0 3px 7px rgba(0,0,0,0.32), inset 0 0 0 1px #fff, inset 0 0 0 4px #ececec, inset 0 0 0 5px rgba(0,0,0,0.06)}
-.checker.black{background:var(--black-piece);border-color:#000;box-shadow:0 3px 7px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.12), inset 0 0 0 4px #1e1e1e, inset 0 0 0 5px rgba(255,255,255,0.04)}
+.checker.white{background:var(--white-piece);border:1px solid #a0a0a0;box-shadow:0 4px 10px rgba(0,0,0,0.35), inset 0 0 0 1px #fff, inset 0 0 0 2px var(--white-piece), inset 0 0 0 5px color-mix(in srgb, var(--white-piece) 88%, #000), inset 0 0 0 7px var(--white-piece), inset 0 0 0 8px rgba(0,0,0,0.06)}
+.checker.black{background:var(--black-piece);border:1px solid #000;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.18), inset 0 0 0 2px var(--black-piece), inset 0 0 0 5px color-mix(in srgb, var(--black-piece) 70%, #fff), inset 0 0 0 7px var(--black-piece)}
 .more{font-size:.75rem;background:#0f0f0f;color:#fff;padding:2px 7px;border-radius:8px;border:1px solid #333;z-index:11}
 .barMid{width:42px;background:linear-gradient(180deg, color-mix(in srgb, var(--exterior) 80%, #4a2e16), var(--exterior));border:2px solid var(--exterior);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:10px 4px;box-shadow:inset 0 0 14px rgba(0,0,0,.6)}
 .barStack{display:flex;flex-direction:column;align-items:center;gap:3px;min-height:0;width:100%;padding:4px 2px}

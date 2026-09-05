@@ -12,13 +12,13 @@ export type BoardColors = {
 }
 
 export const defaultColors: BoardColors = {
-  boardBase: '#3e2723',
-  boardField: '#0f6b3d',
-  triLight: '#f5e6c8',
-  triDark: '#8b5a2b',
-  exterior: '#2b1a0e',
-  whitePiece: '#f8fafc',
-  blackPiece: '#0f0f0f',
+  boardBase: '#7a3f2a',
+  boardField: '#e19247',
+  triLight: '#f4b862',
+  triDark: '#9f452d',
+  exterior: '#3e2723',
+  whitePiece: '#fffaf0',
+  blackPiece: '#1e1e1e',
 }
 
 export type Settings = {
@@ -48,7 +48,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(() => {
     try {
       const raw = localStorage.getItem(KEY)
-      if (raw) return { ...defaultSettings, ...JSON.parse(raw), colors: { ...defaultColors, ...JSON.parse(raw).colors } }
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        // migrate old palettes to exact Live colors
+        const old = parsed.colors
+        const isOld = old?.triLight !== '#f4b862' || old?.triDark !== '#9f452d' || old?.boardField !== '#e19247'
+        if (old?.boardField === '#0f6b3d' || old?.boardField === '#e8c9a6' || old?.boardField === '#e8b67a' || old?.boardBase === '#3e2723' || old?.boardBase === '#8d6e63' || old?.boardBase === '#7a3f2a') {
+          if (isOld) return defaultSettings
+        }
+        return { ...defaultSettings, ...parsed, colors: { ...defaultColors, ...parsed.colors } }
+      }
     } catch {}
     return defaultSettings
   })

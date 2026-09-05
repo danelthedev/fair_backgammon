@@ -49,15 +49,15 @@ export function SettingsButton() {
           </label>
           <div style={{ height: 1, background: 'var(--line)', opacity: 0.5 }} />
           {Object.entries(labels).map(([key, label]) => (
-            <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-              <span style={{ fontSize: '0.85rem', opacity: 0.9 }}>{label}</span>
+            <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 8 }}>
               <input
                 type="color"
                 value={(settings.colors as any)[key]}
                 onChange={e => updateColor(key as any, e.target.value)}
-                style={{ width: 32, height: 28, padding: 0, border: '1px solid var(--line)', borderRadius: 6, cursor: 'pointer', background: 'transparent' }}
+                style={{ width: 32, height: 28, padding: 0, border: '1px solid var(--line)', borderRadius: 6, cursor: 'pointer', background: 'transparent', flexShrink: 0 }}
                 aria-label={label}
               />
+              <span style={{ fontSize: '0.85rem', opacity: 0.9, flex: 1 }}>{label}</span>
             </div>
           ))}
           <button className="btn small ghost" onClick={reset} style={{ marginTop: 4 }}>
