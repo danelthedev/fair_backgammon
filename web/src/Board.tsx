@@ -514,7 +514,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   return (
     <div className="boardWrap" onContextMenu={e => e.preventDefault()}>
       <div className="topBar">
-        {winner ? <span className="turn big">{winner} wins!</span> : !(server.players[0] && server.players[1]) ? <span className="codePill">{code}</span> : <span />}
+        {winner ? <span className="turn big">{winner} wins! {scores?.[0] ?? 0}-{scores?.[1] ?? 0}</span> : !(server.players[0] && server.players[1]) ? <span className="codePill">{code}</span> : <span />}
         <div style={{ display: 'flex', gap: '8px' }}>
           {!winner && server.players[0] && server.players[1] && (
             <button className="btn small ghost" onClick={requestResign} style={{ color: '#f87171', borderColor: '#7f1d1d' }}>
@@ -612,12 +612,10 @@ export function Board({ code, username, onLeave }: { code: string; username: str
       </div>
       {winner && (
         <div className="rematchBox" style={{ textAlign: 'center', margin: '16px 0' }}>
-          <div className="turn big">{winner} wins! {scores?.[0] ?? 0}-{scores?.[1] ?? 0}</div>
           <button className="btn primary large" onClick={requestRematch} disabled={rematch?.[myIdx]} style={{ marginTop: 10 }}>
             {rematch?.[myIdx] ? 'Waiting for opponent...' : 'Rematch'}
           </button>
           {rematch?.[opponentIdx] && !rematch?.[myIdx] && <div className="hint" style={{ marginTop: 6 }}>Opponent wants rematch</div>}
-          <button className="btn small ghost" onClick={onLeave} style={{ marginTop: 10, marginLeft: 8 }}>Leave lobby</button>
         </div>
       )}
     </div>

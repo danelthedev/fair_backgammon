@@ -3,7 +3,7 @@
 body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--white);min-height:100vh}
 .title{font-size:2.6rem;letter-spacing:-.04em;font-weight:800}
 .subtitle{opacity:.6;margin-top:.2rem}
-.lobby{max-width:640px;margin:6vh auto;padding:2rem;text-align:center}
+.lobby{max-width:960px;margin:6vh auto;padding:2rem;text-align:center}
 .input{width:100%;padding:.7rem .9rem;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--white);outline:none}
 .input:focus{border-color:var(--accent)}
 .input.user{max-width:320px;margin:1.2rem auto;display:block;text-align:center;font-size:1.1rem}
@@ -98,5 +98,6 @@ body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--whi
 .offStack .checker.small:not(:first-child){margin-top:-5px}
 .checker.fly{position:absolute;z-index:30;pointer-events:none;transition: left .38s ease, top .38s ease;box-shadow:0 8px 18px rgba(0,0,0,.6),inset 0 2px 3px rgba(255,255,255,.45)}
 .boardWrap{position:relative}
-@media(max-width:1100px){.boardWrap{padding:1rem}.boardRow{flex-direction:column}.sideBtn{position:relative;flex:none;width:100%;height:auto;display:flex;flex-direction:row;justify-content:center;gap:10px;margin:1rem auto;align-self:stretch}.sideBtn .btn{position:static;transform:none}.offTray{position:static;transform:none;flex:none;width:100%;flex-direction:row;justify-content:center;margin:1rem auto;min-height:auto;order:0}.offTray.trough{height:auto;min-height:auto}.troughInner{flex-direction:row}}
+.rematchBox{padding-right:42px}
+@media(max-width:1100px){.boardWrap{padding:1rem}.boardRow{flex-direction:column}.sideBtn{position:relative;flex:none;width:100%;height:auto;display:flex;flex-direction:row;justify-content:center;gap:10px;margin:1rem auto;align-self:stretch}.sideBtn .btn{position:static;transform:none}.offTray{position:static;transform:none;flex:none;width:100%;flex-direction:row;justify-content:center;margin:1rem auto;min-height:auto;order:0}.offTray.trough{height:auto;min-height:auto}.troughInner{flex-direction:row}.rematchBox{padding-right:0}}
 @media(max-width:900px){.cards{grid-template-columns:1fr}.point{height:260px}.checker{width:36px;height:36px}.board{min-height:560px}}

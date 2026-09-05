@@ -33,15 +33,14 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
   }
 
   return (
-    <div className="lobby">
-      <h1 className="title">fair_backgammon</h1>
-      <p className="subtitle">buttery smooth. no lag. just play.</p>
+    <div className="lobby" style={{ marginTop: '3vh' }}>
+      <input className="input user" placeholder="username" value={user} onChange={e => setUser(e.target.value)} maxLength={20} style={{ position: 'fixed', top: 12, left: 12, width: 200, textAlign: 'left', margin: 0, zIndex: 100 }} />
+      <h1 className="title" style={{ textAlign: 'center' }}>Fair Backgammon</h1>
 
-      <input className="input user" placeholder="username" value={user} onChange={e => setUser(e.target.value)} maxLength={20} />
 
-      <div className="cards">
-        <div className="card">
-          <button className="btn primary" onClick={handleCreate}>Create lobby</button>
+      <div className="cards" style={{ gridTemplateColumns: '1fr', maxWidth: 420, marginLeft: 'auto', marginRight: 'auto', marginTop: '2.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+          <button className="btn primary large" style={{ width: '100%' }} onClick={handleCreate}>Create lobby</button>
           {created && (
             <div className="codeBox">
               <span className="code">{created}</span>
@@ -51,16 +50,15 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
           )}
         </div>
 
-        <div className="card">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div className="joinRow">
             <input className="input codeInput" placeholder="CODE" value={code} onChange={e => setCode(e.target.value.toUpperCase())} maxLength={4} />
             <button className="btn" onClick={() => handleJoin()}>Join</button>
           </div>
-          <span className="hint">code from friend, 4 chars</span>
         </div>
       </div>
 
-      {err && <div className="error">{err}</div>}
+      {err && <div className="error" style={{ maxWidth: 420, marginLeft: 'auto', marginRight: 'auto' }}>{err}</div>}
     </div>
   )
 }

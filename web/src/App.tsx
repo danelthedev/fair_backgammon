@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { leaveLobby } from './api'
 import { Lobby } from './Lobby'
 import { Board } from './Board'
 import { SettingsButton } from './Settings'
@@ -15,7 +16,6 @@ export default function App() {
   }
   const leave = async () => {
     if (code) {
-      const { leaveLobby } = await import('./api')
       await leaveLobby(code).catch(() => {})
     }
     setCode(null)
