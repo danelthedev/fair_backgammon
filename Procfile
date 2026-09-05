@@ -1,1 +1,1 @@
-web: ./fair_backgammon
+web: bin/fair_backgammon
