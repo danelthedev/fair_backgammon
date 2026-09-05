@@ -120,7 +120,10 @@ func main() {
 	})
 
 	// serve frontend — ponytail: one binary
-	sub, _ := fs.Sub(dist, "web/dist")
+	sub, err := fs.Sub(dist, "web/dist")
+	if err != nil {
+		log.Printf("embedded dist not found, will serve from filesystem: %v", err)
+	}
 	// SPA fallback: try file, else index.html
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/ws") {
@@ -128,9 +131,11 @@ func main() {
 			return
 		}
 		// try exact file from embedded
-		if _, err := fs.Stat(sub, strings.TrimPrefix(r.URL.Path, "/")); err == nil {
-			http.FileServer(http.FS(sub)).ServeHTTP(w, r)
-			return
+		if sub != nil {
+			if _, err := fs.Stat(sub, strings.TrimPrefix(r.URL.Path, "/")); err == nil {
+				http.FileServer(http.FS(sub)).ServeHTTP(w, r)
+				return
+			}
 		}
 		// try filesystem (local dev / Heroku post-build)
 		if _, err := os.Stat("web/dist" + r.URL.Path); err == nil {
@@ -138,7 +143,10 @@ func main() {
 			return
 		}
 		// fallback index
-		b, _ := fs.ReadFile(sub, "index.html")
+		var b []byte
+		if sub != nil {
+			b, _ = fs.ReadFile(sub, "index.html")
+		}
 		if len(b) == 0 {
 			b, _ = os.ReadFile("web/dist/index.html")
 		}

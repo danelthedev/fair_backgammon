@@ -1,1 +1,1 @@
-web: ./fair_backgammon
+web: ./app
