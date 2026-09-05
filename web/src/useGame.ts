@@ -112,9 +112,7 @@ export function useGame(code: string, username: string) {
             const oppIdx = msg.players[0] === username ? 1 : 0
             if (msg.players[oppIdx] === "") {
               const prev = prevPlayersRef.current
-              const wasFull = prev && prev[0] !== "" && prev[1] !== ""
-              const totalOff = (msg.off?.[0] ?? 0) + (msg.off?.[1] ?? 0)
-              if (wasFull || totalOff > 0 || msg.hasRolled) {
+              if (prev && prev[0] !== "" && prev[1] !== "") {
                 setConnectionError("Opponent left the game")
               }
             }

@@ -118,16 +118,20 @@ export function Board({ code, username, onLeave }: { code: string; username: str
           continue
         }
         const br = boardEl.getBoundingClientRect()
+        const narrow = typeof window !== 'undefined' && window.innerWidth <= 900
+        const flyHalf = narrow ? 18 : 25
+        const flyStep = narrow ? 39 : 53
+        const flySize = narrow ? 36 : 50
         const fromChecker = fromEl.querySelector('.checker:last-child') as HTMLElement | null
         const fr = (fromChecker || fromEl).getBoundingClientRect()
-        const fx = fr.left - br.left + fr.width / 2 - 22
-        const fy = fr.top - br.top + fr.height / 2 - 22
+        const fx = fr.left - br.left + fr.width / 2 - flyHalf
+        const fy = fr.top - br.top + fr.height / 2 - flyHalf
         // dest landing: compute exact stack position where new checker will sit
         let tx: number, ty: number
         if (m.to === -2) {
           const tr = toEl.getBoundingClientRect()
-          tx = tr.left - br.left + tr.width / 2 - 22
-          ty = tr.top - br.top + tr.height / 2 - 22
+          tx = tr.left - br.left + tr.width / 2 - flyHalf
+          ty = tr.top - br.top + tr.height / 2 - flyHalf
         } else {
           const pointRect = toEl.getBoundingClientRect()
           const isTop = !!toEl.closest('.row.top')
@@ -136,13 +140,13 @@ export function Board({ code, username, onLeave }: { code: string; username: str
           const hasChecker = !!toEl.querySelector('.checker')
           if (!hasChecker || hit) {
             // empty or hit (cleared): base of stack
-            tx = pointRect.left - br.left + pointRect.width / 2 - 22
-            ty = isTop ? pointRect.top - br.top + 12 : pointRect.bottom - br.top - 12 - 44
+            tx = pointRect.left - br.left + pointRect.width / 2 - flyHalf
+            ty = isTop ? pointRect.top - br.top + 12 : pointRect.bottom - br.top - 12 - flySize
           } else {
             const toChecker = toEl.querySelector('.checker:last-child') as HTMLElement
             const tr = toChecker.getBoundingClientRect()
-            tx = tr.left - br.left + tr.width / 2 - 22
-            ty = tr.top - br.top + (isTop ? 47 : -47)
+            tx = tr.left - br.left + tr.width / 2 - flyHalf
+            ty = tr.top - br.top + (isTop ? flyStep : -flyStep)
           }
         }
         setFly({ x: fx, y: fy, color, visible: true, from: m.from })
@@ -464,10 +468,12 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     const isSelected = selected === idx
     const isHover = hover === idx
     const hideOne = animating && fly?.from === idx && abs > 0
-    // ponytail: overflow stacks cap at 5-high height, overlap with negative margin so never past triangle tip
-    const isOverflow = abs > 5
-    const cs = typeof window !== 'undefined' && window.innerWidth <= 900 ? 36 : 44
-    const MAX = 5 * cs + 4 * 3
+    // ponytail: overlap only when stack exceeds point height, never past triangle tip
+    const cs = typeof window !== 'undefined' && window.innerWidth <= 900 ? 36 : 50
+    const AVAIL = typeof window !== 'undefined' && window.innerWidth <= 900 ? 213 : 303
+    const FIT = Math.floor((AVAIL + 3) / (cs + 3))
+    const isOverflow = abs > FIT
+    const MAX = AVAIL
     const gap = isOverflow ? (MAX - abs * cs) / (abs - 1) : 3
     return (
       <div
@@ -520,89 +526,89 @@ export function Board({ code, username, onLeave }: { code: string; username: str
       </div>
 
       {error && <div className="error">{error}</div>}
-      <div className="playerRail left">
+      <div className="playerHeader">
         <span className={`playerPill ${!myTurn ? 'active' : ''}`}>{opponentName} · {scores?.[opponentIdx] ?? 0}</span>
-      </div>
-      <div className="playerRail right">
         <span className={`playerPill you ${myTurn ? 'active' : ''}`}>{myName} · {scores?.[myIdx] ?? 0}</span>
       </div>
-      <div className="board" ref={boardRef} onContextMenu={e => e.preventDefault()} style={animating ? { pointerEvents: 'none' } : undefined}>
-        <div className="half left">
-          <div className="row top">{topLeft.map(i => renderPoint(i, true))}</div>
-          <div className="diceMid">
-            {showDice ? (
-              <div className={`dicePair ${isDouble ? 'double' : ''}`}>
-                {diceValues.map((v, i) => (
-                  <Dice key={i} v={v} rolling={rolling} used={diceUsed[i]} />
-                ))}
-              </div>
-            ) : (
-              <div className="dicePlaceholder">—</div>
-            )}
+      <div className="boardRow">
+        <div className="board" ref={boardRef} onContextMenu={e => e.preventDefault()} style={animating ? { pointerEvents: 'none' } : undefined}>
+          <div className="half left">
+            <div className="row top">{topLeft.map(i => renderPoint(i, true))}</div>
+            <div className="diceMid">
+              {showDice ? (
+                <div className={`dicePair ${isDouble ? 'double' : ''}`}>
+                  {diceValues.map((v, i) => (
+                    <Dice key={i} v={v} rolling={rolling} used={diceUsed[i]} />
+                  ))}
+                </div>
+              ) : (
+                <div className="dicePlaceholder">—</div>
+              )}
+            </div>
+            <div className="row bottom">{botLeft.map(i => renderPoint(i, false))}</div>
           </div>
-          <div className="row bottom">{botLeft.map(i => renderPoint(i, false))}</div>
-        </div>
 
-        <div className="barMid">
-          <div
-            data-bar={barTopIdx}
-            className={`barStack top ${selected === -1 && myIdx === barTopIdx ? 'selected' : ''}`}
-            onMouseEnter={() => setHover(-1)}
-            onMouseLeave={() => setHover(null)}
-            onClick={() => {
-              if (selected === -1) setSelected(null)
-              else if (validDests.has(-2) && selected !== null) handleDest(-2)
-              else handleSelect(-1)
-            }}
-          >
-            {Array.from({ length: display.bar[barTopIdx] }).map((_, i) => {
-              const hide = animating && fly?.from === -1 && animMoves?.mover === barTopIdx && i === display.bar[barTopIdx] - 1
-              return <div key={`w${i}`} className={`checker ${barTopIdx === 0 ? 'white' : 'black'} ${selected === -1 && myIdx === barTopIdx ? 'selected' : ''}`} style={{ opacity: hide ? 0 : 1 }} />
-            })}
-            {selected === -1 && <div className={`dot ${validDests.has(-2) ? 'show' : ''}`} style={{ position: 'relative', top: 6 }} />}
+          <div className="barMid">
+            <div
+              data-bar={barTopIdx}
+              className={`barStack top ${selected === -1 && myIdx === barTopIdx ? 'selected' : ''}`}
+              onMouseEnter={() => setHover(-1)}
+              onMouseLeave={() => setHover(null)}
+              onClick={() => {
+                if (selected === -1) setSelected(null)
+                else if (validDests.has(-2) && selected !== null) handleDest(-2)
+                else handleSelect(-1)
+              }}
+            >
+              {Array.from({ length: display.bar[barTopIdx] }).map((_, i) => {
+                const hide = animating && fly?.from === -1 && animMoves?.mover === barTopIdx && i === display.bar[barTopIdx] - 1
+                return <div key={`w${i}`} className={`checker ${barTopIdx === 0 ? 'white' : 'black'} ${selected === -1 && myIdx === barTopIdx ? 'selected' : ''}`} style={{ opacity: hide ? 0 : 1 }} />
+              })}
+              {selected === -1 && <div className={`dot ${validDests.has(-2) ? 'show' : ''}`} style={{ position: 'relative', top: 6 }} />}
+            </div>
+            <div data-bar={barBottomIdx} className={`barStack bottom ${selected === -1 && myIdx === barBottomIdx ? 'selected' : ''}`} onMouseEnter={() => setHover(-1)} onMouseLeave={() => setHover(null)} onClick={() => handleSelect(-1)}>
+              {Array.from({ length: display.bar[barBottomIdx] }).map((_, i) => {
+                const hide = animating && fly?.from === -1 && animMoves?.mover === barBottomIdx && i === display.bar[barBottomIdx] - 1
+                return <div key={`b${i}`} className={`checker ${barBottomIdx === 0 ? 'white' : 'black'} ${selected === -1 && myIdx === barBottomIdx ? 'selected' : ''}`} style={{ opacity: hide ? 0 : 1 }} />
+              })}
+            </div>
+            <div className="offMid" onClick={() => validDests.has(-2) && selected !== null && handleDest(-2)}>
+              <div className={`offDot ${validDests.has(-2) ? 'show' : ''}`} />
+            </div>
           </div>
-          <div data-bar={barBottomIdx} className={`barStack bottom ${selected === -1 && myIdx === barBottomIdx ? 'selected' : ''}`} onMouseEnter={() => setHover(-1)} onMouseLeave={() => setHover(null)} onClick={() => handleSelect(-1)}>
-            {Array.from({ length: display.bar[barBottomIdx] }).map((_, i) => {
-              const hide = animating && fly?.from === -1 && animMoves?.mover === barBottomIdx && i === display.bar[barBottomIdx] - 1
-              return <div key={`b${i}`} className={`checker ${barBottomIdx === 0 ? 'white' : 'black'} ${selected === -1 && myIdx === barBottomIdx ? 'selected' : ''}`} style={{ opacity: hide ? 0 : 1 }} />
-            })}
-          </div>
-          <div className="offMid" onClick={() => validDests.has(-2) && selected !== null && handleDest(-2)}>
-            <div className={`offDot ${validDests.has(-2) ? 'show' : ''}`} />
-          </div>
-        </div>
 
-        <div className="half right">
-          <div className="row top">{topRight.map(i => renderPoint(i, true))}</div>
-          <div className="diceMid" aria-hidden style={{ visibility: 'hidden' }} />
-          <div className="row bottom">{botRight.map(i => renderPoint(i, false))}</div>
-        </div>
-        {fly?.visible && <div className={`checker ${fly.color} fly`} style={{ left: fly.x, top: fly.y }} />}
-      </div>
-      <div className="offTray trough">
-        <div className="troughInner">
-          <div className={`offStack ${offTopIdx === 0 ? 'white-trough' : 'black-trough'}`} data-off={offTopIdx}>
-            {Array.from({ length: display.off[offTopIdx] }).map((_, i) => (
-              <div key={`o${offTopIdx}${i}`} className={`checker ${offTopIdx === 0 ? 'white' : 'black'} small`} />
-            ))}
+          <div className="half right">
+            <div className="row top">{topRight.map(i => renderPoint(i, true))}</div>
+            <div className="diceMid" aria-hidden style={{ visibility: 'hidden' }} />
+            <div className="row bottom">{botRight.map(i => renderPoint(i, false))}</div>
           </div>
-          <div className="troughCenter" aria-hidden />
-          <div className={`offStack ${offBottomIdx === 0 ? 'white-trough' : 'black-trough'}`} data-off={offBottomIdx}>
-            {Array.from({ length: display.off[offBottomIdx] }).map((_, i) => (
-              <div key={`o${offBottomIdx}${i}`} className={`checker ${offBottomIdx === 0 ? 'white' : 'black'} small`} />
-            ))}
+          {fly?.visible && <div className={`checker ${fly.color} fly`} style={{ left: fly.x, top: fly.y }} />}
+        </div>
+        <div className="offTray trough">
+          <div className="troughInner">
+            <div className={`offStack ${offTopIdx === 0 ? 'white-trough' : 'black-trough'}`} data-off={offTopIdx}>
+              {Array.from({ length: display.off[offTopIdx] }).map((_, i) => (
+                <div key={`o${offTopIdx}${i}`} className={`checker ${offTopIdx === 0 ? 'white' : 'black'} small`} />
+              ))}
+            </div>
+            <div className="troughCenter" aria-hidden />
+            <div className={`offStack ${offBottomIdx === 0 ? 'white-trough' : 'black-trough'}`} data-off={offBottomIdx}>
+              {Array.from({ length: display.off[offBottomIdx] }).map((_, i) => (
+                <div key={`o${offBottomIdx}${i}`} className={`checker ${offBottomIdx === 0 ? 'white' : 'black'} small`} />
+              ))}
+            </div>
           </div>
         </div>
-      </div>
-      <div className="sideBtn">
-        {!winner && myTurn && !server.hasRolled && !animating && !rolling && server.players[0] && server.players[1] ? (
-          <button className="btn primary large" onClick={roll}>Roll</button>
-        ) : !winner && pending.length > 0 ? (
-          <button className="btn ghost large" onClick={undo}>Undo</button>
-        ) : null}
-        {canConfirm && !winner && (
-          <button className="btn primary large" onClick={confirm} style={{ marginTop: 10 }}>Confirm</button>
-        )}
+        <div className="sideBtn">
+          {!winner && myTurn && !server.hasRolled && !animating && !rolling && server.players[0] && server.players[1] ? (
+            <button className="btn primary large" onClick={roll}>Roll</button>
+          ) : !winner && pending.length > 0 ? (
+            <button className="btn ghost large" onClick={undo}>Undo</button>
+          ) : null}
+          {canConfirm && !winner && (
+            <button className="btn primary large" onClick={confirm} style={{ marginTop: 10 }}>Confirm</button>
+          )}
+        </div>
       </div>
       {winner && (
         <div className="rematchBox" style={{ textAlign: 'center', margin: '16px 0' }}>
