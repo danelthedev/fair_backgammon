@@ -243,7 +243,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
 
   const source = selected !== null ? selected : hover
   const combinedMap = (() => {
-    if (animating || rolling || source === null || !myTurn || !server.hasRolled) return new Map<number, { from: number; to: number; die: number }[]>()
+    if (winner || animating || rolling || source === null || !myTurn || !server.hasRolled) return new Map<number, { from: number; to: number; die: number }[]>()
     const map = new Map<number, { from: number; to: number; die: number }[]>()
     const dice = [...movesLeft]
     if (dice.length < 2) return map
@@ -355,7 +355,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   })()
 
   const validDests = new Set<number>()
-  if (source !== null && myTurn && server.hasRolled && !animating && !rolling) {
+  if (!winner && source !== null && myTurn && server.hasRolled && !animating && !rolling) {
     movesLeft.forEach((d: number) => {
       for (let to = -2; to < 24; to++) {
         if (to === -1) continue
@@ -366,7 +366,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   }
 
   const handleSelect = (from: number) => {
-    if (animating || rolling) return
+    if (winner || animating || rolling) return
     if (!myTurn || !server.hasRolled) return
     if (selected === from) {
       setSelected(null)
@@ -394,7 +394,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   }
 
   const handleDest = (to: number) => {
-    if (animating || rolling) return
+    if (winner || animating || rolling) return
     if (selected === null) return
     if (combinedMap.has(to)) {
       const seq = combinedMap.get(to)!
@@ -414,7 +414,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
 
   // ponytail: right-click = biggest single-die legal move from that column
   const handleRightClick = (from: number) => {
-    if (animating || rolling) return
+    if (winner || animating || rolling) return
     if (!myTurn || !server.hasRolled) return
     if (from === -1) {
       if (local.bar[myIdx] === 0) return
@@ -580,9 +580,6 @@ export function Board({ code, username, onLeave }: { code: string; username: str
                 return <div key={`b${i}`} className={`checker ${barBottomIdx === 0 ? 'white' : 'black'} ${selected === -1 && myIdx === barBottomIdx ? 'selected' : ''}`} style={{ opacity: hide ? 0 : 1 }} />
               })}
             </div>
-            <div className="offMid" onClick={() => validDests.has(-2) && selected !== null && handleDest(-2)}>
-              <div className={`offDot ${validDests.has(-2) ? 'show' : ''}`} />
-            </div>
           </div>
 
           <div className="half right">
@@ -592,7 +589,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
           </div>
           {fly?.visible && <div className={`checker ${fly.color} fly`} style={{ left: fly.x, top: fly.y }} />}
         </div>
-        <div className="offTray trough">
+        <div className={`offTray trough ${selected !== null && validDests.has(-2) ? 'canBearOff' : ''}`} onClick={() => { if (selected !== null && validDests.has(-2)) handleDest(-2) }}>
           <div className="troughInner">
             <div className={`offStack ${offTopIdx === 0 ? 'white-trough' : 'black-trough'}`} data-off={offTopIdx}>
               {Array.from({ length: display.off[offTopIdx] }).map((_, i) => (

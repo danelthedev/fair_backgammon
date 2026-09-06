@@ -124,6 +124,7 @@ export function useGame(code: string, username: string) {
         } else if (msg.t === 'win') {
           const name = msg.winnerName ?? serverRef.current?.players[msg.winner] ?? `Player ${msg.winner}`
           setWinner(name)
+          setPending([])
           setError(`${name} wins!`)
         } else if (msg.t === 'rematch') {
           if (msg.scores) {
@@ -133,6 +134,7 @@ export function useGame(code: string, username: string) {
           setConnectionError("Opponent left the game")
           setError("Opponent left")
           setWinner(null)
+          setPending([])
         }
       } catch {}
     }
@@ -160,6 +162,7 @@ export function useGame(code: string, username: string) {
   }
 
   const roll = () => {
+    if (winner) { setError('game over'); return }
     if (!myTurn) { setError('not your turn'); return }
     send({ t: 'roll' })
   }
