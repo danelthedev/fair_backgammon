@@ -430,7 +430,6 @@ export function Board({ code, username, onLeave }: { code: string; username: str
         if (isLegal(from, to, d)) {
           addMove({ from, to, die: d })
           setSelected(null)
-          setHover(null)
           return
         }
       }
@@ -555,9 +554,18 @@ export function Board({ code, username, onLeave }: { code: string; username: str
               onMouseEnter={() => setHover(-1)}
               onMouseLeave={() => setHover(null)}
               onClick={() => {
-                if (selected === -1) setSelected(null)
+                if (settings.swapClicks) handleRightClick(-1)
+                else if (selected === -1) setSelected(null)
                 else if (validDests.has(-2) && selected !== null) handleDest(-2)
                 else handleSelect(-1)
+              }}
+              onContextMenu={e => {
+                e.preventDefault()
+                if (settings.swapClicks) {
+                  if (selected === -1) setSelected(null)
+                  else if (validDests.has(-2) && selected !== null) handleDest(-2)
+                  else handleSelect(-1)
+                } else handleRightClick(-1)
               }}
             >
               {Array.from({ length: display.bar[barTopIdx] }).map((_, i) => {
@@ -566,7 +574,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
               })}
               {selected === -1 && <div className={`dot ${validDests.has(-2) ? 'show' : ''}`} style={{ position: 'relative', top: 6 }} />}
             </div>
-            <div data-bar={barBottomIdx} className={`barStack bottom ${selected === -1 && myIdx === barBottomIdx ? 'selected' : ''}`} onMouseEnter={() => setHover(-1)} onMouseLeave={() => setHover(null)} onClick={() => handleSelect(-1)}>
+            <div data-bar={barBottomIdx} className={`barStack bottom ${selected === -1 && myIdx === barBottomIdx ? 'selected' : ''}`} onMouseEnter={() => setHover(-1)} onMouseLeave={() => setHover(null)} onClick={() => { if (settings.swapClicks) handleRightClick(-1); else handleSelect(-1) }} onContextMenu={e => { e.preventDefault(); if (settings.swapClicks) handleSelect(-1); else handleRightClick(-1) }}>
               {Array.from({ length: display.bar[barBottomIdx] }).map((_, i) => {
                 const hide = animating && fly?.from === -1 && animMoves?.mover === barBottomIdx && i === display.bar[barBottomIdx] - 1
                 return <div key={`b${i}`} className={`checker ${barBottomIdx === 0 ? 'white' : 'black'} ${selected === -1 && myIdx === barBottomIdx ? 'selected' : ''}`} style={{ opacity: hide ? 0 : 1 }} />
