@@ -69,10 +69,11 @@ func wsHandler(hub *lobby.Hub) http.HandlerFunc {
 				break
 			}
 			var msg struct {
-				T    string `json:"t"`
-				From *int   `json:"from"`
-				To   *int   `json:"to"`
-				Die  *int   `json:"die"`
+				T      string  `json:"t"`
+				From   *int    `json:"from"`
+				To     *int    `json:"to"`
+				Die    *int    `json:"die"`
+				Action *string `json:"action"`
 			}
 			if err := json.Unmarshal(data, &msg); err != nil {
 				b, _ := json.Marshal(map[string]string{"t": "error", "msg": "bad json"})
@@ -100,6 +101,7 @@ func sendErr(conn *websocket.Conn, s string) {
 	b, _ := json.Marshal(map[string]string{"t": "error", "msg": s})
 	_ = conn.WriteMessage(websocket.TextMessage, b)
 }
+
 //go:embed all:web/dist
 var dist embed.FS
 
@@ -162,6 +164,7 @@ func main() {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html")
+		w.Header().Set("Cache-Control", "no-store")
 		w.Write(b)
 	})
 

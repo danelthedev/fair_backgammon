@@ -14,18 +14,22 @@ type Hub struct {
 }
 
 type Room struct {
-	Code    string
-	Game    *game.Game
-	Players [2]string // username, empty = slot free
-	LastMoves []game.Move
-	Scores    [2]int
-	Rematch   [2]bool
+	Code            string
+	Game            *game.Game
+	Players         [2]string // username, empty = slot free
+	LastMoves       []game.Move
+	Scores          [2]int
+	Rematch         [2]bool
+	Cube            int
+	DoubleOffer     *DoubleOffer
+	DoubledThisTurn bool
 
 	mu        sync.Mutex
 	subs      map[chan []byte]struct{}
 	userSubs  map[chan []byte]string
 	connCount map[string]int
 }
+
 func NewHub() *Hub { return &Hub{games: make(map[string]*Room)} }
 
 func (h *Hub) Create(username string) *Room {
@@ -40,6 +44,7 @@ func (h *Hub) Create(username string) *Room {
 	}
 	r := &Room{Code: code, Game: game.NewGame(), subs: make(map[chan []byte]struct{}), userSubs: make(map[chan []byte]string), connCount: make(map[string]int)}
 	r.Players[0] = username
+	r.Cube = 1
 	h.games[code] = r
 	return r
 }
@@ -105,29 +110,47 @@ func (h *Hub) Leave(code, username string) {
 	r.mu.Lock()
 	msg, _ := json.Marshal(map[string]any{"t": "opponent_left", "scores": r.Scores})
 	for ch := range r.subs {
-		select { case ch <- msg: default: }
+		select {
+		case ch <- msg:
+		default:
+		}
 	}
 	r.mu.Unlock()
 	r.BroadcastState()
+}
+
+type DoubleOffer struct {
+	By    int `json:"by"`
+	Stake int `json:"stake"`
+}
+
+func (r *Room) Stake() int {
+	if r.Cube < 1 {
+		return 1
+	}
+	return r.Cube
 }
 
 func (r *Room) BroadcastState() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	msg, _ := json.Marshal(map[string]any{
-		"t":         "state",
-		"code":      r.Code,
-		"board":     r.Game.Board,
-		"bar":       r.Game.Bar,
-		"off":       r.Game.Off,
-		"turn":      r.Game.Turn,
-		"dice":      r.Game.Dice,
-		"movesLeft": r.Game.MovesLeft,
-		"hasRolled": r.Game.HasRolled,
-		"players":   r.Players,
-		"lastMoves": r.LastMoves,
-		"scores":    r.Scores,
-		"rematch":   r.Rematch,
+		"t":               "state",
+		"code":            r.Code,
+		"board":           r.Game.Board,
+		"bar":             r.Game.Bar,
+		"off":             r.Game.Off,
+		"turn":            r.Game.Turn,
+		"dice":            r.Game.Dice,
+		"movesLeft":       r.Game.MovesLeft,
+		"hasRolled":       r.Game.HasRolled,
+		"players":         r.Players,
+		"lastMoves":       r.LastMoves,
+		"scores":          r.Scores,
+		"rematch":         r.Rematch,
+		"cube":            r.Cube,
+		"doubleOffer":     r.DoubleOffer,
+		"doubledThisTurn": r.DoubledThisTurn,
 	})
 	for ch := range r.subs {
 		select {
@@ -208,7 +231,10 @@ func (h *Hub) HandleDisconnect(code, username string) {
 		r.mu.Lock()
 		msg, _ := json.Marshal(map[string]any{"t": "opponent_left", "scores": r.Scores})
 		for ch := range r.subs {
-			select { case ch <- msg: default: }
+			select {
+			case ch <- msg:
+			default:
+			}
 		}
 		r.mu.Unlock()
 		r.BroadcastState()

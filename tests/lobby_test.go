@@ -66,10 +66,11 @@ func TestTurnRollAndMove(t *testing.T) {
 	mc := &mockConn{}
 	bob := &mockConn{}
 	bobMsg := struct {
-		T    string `json:"t"`
-		From *int   `json:"from"`
-		To   *int   `json:"to"`
-		Die  *int   `json:"die"`
+		T      string  `json:"t"`
+		From   *int    `json:"from"`
+		To     *int    `json:"to"`
+		Die    *int    `json:"die"`
+		Action *string `json:"action"`
 	}{T: "roll"}
 	r.GameTurn(bob, nil, "", 1, bobMsg)
 	if bob.lastErr() != "not your turn" {
@@ -82,10 +83,11 @@ func TestTurnRollAndMove(t *testing.T) {
 	die := 7
 	from, to := 23, 20
 	bad := struct {
-		T    string `json:"t"`
-		From *int   `json:"from"`
-		To   *int   `json:"to"`
-		Die  *int   `json:"die"`
+		T      string  `json:"t"`
+		From   *int    `json:"from"`
+		To     *int    `json:"to"`
+		Die    *int    `json:"die"`
+		Action *string `json:"action"`
 	}{T: "move", From: &from, To: &to, Die: &die}
 	mc2 := &mockConn{}
 	r.GameTurn(mc2, nil, "", 0, bad)
@@ -111,10 +113,11 @@ func TestTurnRollAndMove(t *testing.T) {
 	}
 	mc3 := &mockConn{}
 	r.GameTurn(mc3, nil, "", 0, struct {
-		T    string `json:"t"`
-		From *int   `json:"from"`
-		To   *int   `json:"to"`
-		Die  *int   `json:"die"`
+		T      string  `json:"t"`
+		From   *int    `json:"from"`
+		To     *int    `json:"to"`
+		Die    *int    `json:"die"`
+		Action *string `json:"action"`
 	}{T: "move", From: &found.From, To: &found.To, Die: &found.Die})
 	if mc3.lastErr() != "" {
 		t.Fatalf("legal move got err %s", mc3.lastErr())
@@ -137,10 +140,11 @@ func TestWinBroadcast(t *testing.T) {
 	mc := &mockConn{}
 	from, to, die := 0, -2, 1
 	r.GameTurn(mc, nil, "", 0, struct {
-		T    string `json:"t"`
-		From *int   `json:"from"`
-		To   *int   `json:"to"`
-		Die  *int   `json:"die"`
+		T      string  `json:"t"`
+		From   *int    `json:"from"`
+		To     *int    `json:"to"`
+		Die    *int    `json:"die"`
+		Action *string `json:"action"`
 	}{T: "move", From: &from, To: &to, Die: &die})
 	foundWin := false
 	for len(ch) > 0 {

@@ -14,10 +14,11 @@ func (r *Room) GameTurnLocked(_ interface{}, _ *Room, _ int, _ any) {} // stub f
 func (r *Room) GameTurn(conn interface {
 	WriteMessage(int, []byte) error
 }, _ *Room, _ string, idx int, msg struct {
-	T    string `json:"t"`
-	From *int   `json:"from"`
-	To   *int   `json:"to"`
-	Die  *int   `json:"die"`
+	T      string  `json:"t"`
+	From   *int    `json:"from"`
+	To     *int    `json:"to"`
+	Die    *int    `json:"die"`
+	Action *string `json:"action"`
 }, replyCh ...chan []byte) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -47,7 +48,7 @@ func (r *Room) GameTurn(conn interface {
 			sendErr("game over, request rematch")
 			return
 		}
-	} else if msg.T != "resign" && msg.T != "rematch" && g.Turn != game.Player(idx) {
+	} else if msg.T != "resign" && msg.T != "rematch" && msg.T != "double_response" && g.Turn != game.Player(idx) {
 		sendErr("not your turn")
 		return
 	}
@@ -55,6 +56,10 @@ func (r *Room) GameTurn(conn interface {
 	case "roll":
 		if r.Players[0] == "" || r.Players[1] == "" {
 			sendErr("waiting for opponent")
+			return
+		}
+		if r.DoubleOffer != nil {
+			sendErr("double offer pending")
 			return
 		}
 		if g.HasRolled {
@@ -67,18 +72,27 @@ func (r *Room) GameTurn(conn interface {
 			g.HasRolled = false
 			g.MovesLeft = nil
 			g.Turn = 1 - g.Turn
+			r.DoubledThisTurn = false
 		}
 		r.broadcastStateLocked()
 		if win, w := g.CheckWin(); win {
-			r.Scores[w]++
+			r.Scores[w] += r.Stake()
 			r.Rematch = [2]bool{false, false}
+			r.DoubleOffer = nil
 			b, _ := json.Marshal(map[string]any{"t": "win", "winner": w, "winnerName": r.Players[w], "scores": r.Scores})
 			for ch := range r.subs {
-				select { case ch <- b: default: }
+				select {
+				case ch <- b:
+				default:
+				}
 			}
 			r.broadcastStateLocked()
 		}
 	case "move":
+		if r.DoubleOffer != nil {
+			sendErr("double offer pending")
+			return
+		}
 		if msg.From == nil || msg.To == nil || msg.Die == nil {
 			sendErr("from/to/die required")
 			return
@@ -93,18 +107,27 @@ func (r *Room) GameTurn(conn interface {
 			g.MovesLeft = nil
 			g.HasRolled = false
 			g.Turn = 1 - g.Turn
+			r.DoubledThisTurn = false
 		}
 		r.broadcastStateLocked()
 		if win, w := g.CheckWin(); win {
-			r.Scores[w]++
+			r.Scores[w] += r.Stake()
 			r.Rematch = [2]bool{false, false}
+			r.DoubleOffer = nil
 			b, _ := json.Marshal(map[string]any{"t": "win", "winner": w, "winnerName": r.Players[w], "scores": r.Scores})
 			for ch := range r.subs {
-				select { case ch <- b: default: }
+				select {
+				case ch <- b:
+				default:
+				}
 			}
 			r.broadcastStateLocked()
 		}
 	case "pass":
+		if r.DoubleOffer != nil {
+			sendErr("double offer pending")
+			return
+		}
 		if g.HasAnyLegal() {
 			sendErr("you have legal moves")
 			return
@@ -113,6 +136,7 @@ func (r *Room) GameTurn(conn interface {
 		g.MovesLeft = nil
 		g.HasRolled = false
 		g.Turn = 1 - g.Turn
+		r.DoubledThisTurn = false
 		r.broadcastStateLocked()
 	case "rematch":
 		if win, _ := g.CheckWin(); !win {
@@ -124,6 +148,9 @@ func (r *Room) GameTurn(conn interface {
 			r.Game = game.NewGame()
 			r.LastMoves = nil
 			r.Rematch = [2]bool{false, false}
+			r.Cube = 1
+			r.DoubleOffer = nil
+			r.DoubledThisTurn = false
 			// swap colors on rematch
 			r.Players[0], r.Players[1] = r.Players[1], r.Players[0]
 			r.Scores[0], r.Scores[1] = r.Scores[1], r.Scores[0]
@@ -132,7 +159,10 @@ func (r *Room) GameTurn(conn interface {
 			r.broadcastStateLocked()
 			b, _ := json.Marshal(map[string]any{"t": "rematch", "rematch": r.Rematch, "scores": r.Scores})
 			for ch := range r.subs {
-				select { case ch <- b: default: }
+				select {
+				case ch <- b:
+				default:
+				}
 			}
 		}
 	case "resign":
@@ -145,14 +175,91 @@ func (r *Room) GameTurn(conn interface {
 			return
 		}
 		winnerIdx := 1 - idx
-		r.Scores[winnerIdx]++
+		r.Scores[winnerIdx] += r.Stake()
 		r.Rematch = [2]bool{false, false}
+		r.DoubleOffer = nil
 		r.Game.Off[winnerIdx] = 15
 		b, _ := json.Marshal(map[string]any{"t": "win", "winner": winnerIdx, "winnerName": r.Players[winnerIdx], "scores": r.Scores, "reason": "resign"})
 		for ch := range r.subs {
-			select { case ch <- b: default: }
+			select {
+			case ch <- b:
+			default:
+			}
 		}
 		r.broadcastStateLocked()
+	case "double":
+		if win, _ := g.CheckWin(); win {
+			sendErr("game over, request rematch")
+			return
+		}
+		if g.Turn != game.Player(idx) {
+			sendErr("not your turn")
+			return
+		}
+		if g.HasRolled {
+			sendErr("already rolled, cannot double")
+			return
+		}
+		if r.DoubleOffer != nil {
+			sendErr("double already offered")
+			return
+		}
+		if r.DoubledThisTurn {
+			sendErr("already doubled this turn")
+			return
+		}
+		if r.Stake() >= 64 {
+			sendErr("already at 64")
+			return
+		}
+		r.DoubleOffer = &DoubleOffer{By: idx, Stake: r.Stake() * 2}
+		r.DoubledThisTurn = true
+		r.broadcastStateLocked()
+	case "double_response":
+		if r.DoubleOffer == nil {
+			sendErr("no double offer")
+			return
+		}
+		offer := r.DoubleOffer
+		if idx == offer.By {
+			sendErr("wait for opponent response")
+			return
+		}
+		if msg.Action == nil {
+			sendErr("action required")
+			return
+		}
+		switch *msg.Action {
+		case "accept":
+			r.Cube = offer.Stake
+			r.DoubleOffer = nil
+			r.broadcastStateLocked()
+		case "reject":
+			w := offer.By
+			r.Scores[w] += r.Stake()
+			r.Rematch = [2]bool{false, false}
+			r.DoubleOffer = nil
+			r.Game.Off[w] = 15
+			b, _ := json.Marshal(map[string]any{"t": "win", "winner": w, "winnerName": r.Players[w], "scores": r.Scores, "reason": "double_refused"})
+			for ch := range r.subs {
+				select {
+				case ch <- b:
+				default:
+				}
+			}
+			r.broadcastStateLocked()
+		case "redouble":
+			if offer.Stake >= 64 {
+				sendErr("already at 64")
+				return
+			}
+			r.Cube = offer.Stake * 2
+			r.DoubleOffer = nil
+			r.DoubledThisTurn = true
+			r.broadcastStateLocked()
+		default:
+			sendErr("unknown action")
+		}
 	default:
 		sendErr("unknown t")
 	}
@@ -162,7 +269,7 @@ func (r *Room) broadcastStateLocked() {
 	msg, _ := json.Marshal(map[string]any{
 		"t": "state", "code": r.Code, "board": r.Game.Board, "bar": r.Game.Bar, "off": r.Game.Off,
 		"turn": r.Game.Turn, "dice": r.Game.Dice, "movesLeft": r.Game.MovesLeft, "hasRolled": r.Game.HasRolled, "players": r.Players, "lastMoves": r.LastMoves,
-		"scores": r.Scores, "rematch": r.Rematch,
+		"scores": r.Scores, "rematch": r.Rematch, "cube": r.Cube, "doubleOffer": r.DoubleOffer, "doubledThisTurn": r.DoubledThisTurn,
 	})
 	for ch := range r.subs {
 		select {

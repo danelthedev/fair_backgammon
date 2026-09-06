@@ -36,10 +36,11 @@ func TestConcurrentWriteNoPanic(t *testing.T) {
 			from, to, die := 12, 9, 3
 			fakeConn := &fakeConn{}
 			r.GameTurn(fakeConn, nil, "", 0, struct {
-				T    string `json:"t"`
-				From *int   `json:"from"`
-				To   *int   `json:"to"`
-				Die  *int   `json:"die"`
+				T      string  `json:"t"`
+				From   *int    `json:"from"`
+				To     *int    `json:"to"`
+				Die    *int    `json:"die"`
+				Action *string `json:"action"`
 			}{T: "move", From: &from, To: &to, Die: &die}, ch)
 		}()
 	}
