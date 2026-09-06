@@ -47,12 +47,16 @@ func (r *Room) GameTurn(conn interface {
 			sendErr("game over, request rematch")
 			return
 		}
-	} else if g.Turn != game.Player(idx) {
+	} else if msg.T != "resign" && msg.T != "rematch" && g.Turn != game.Player(idx) {
 		sendErr("not your turn")
 		return
 	}
 	switch msg.T {
 	case "roll":
+		if r.Players[0] == "" || r.Players[1] == "" {
+			sendErr("waiting for opponent")
+			return
+		}
 		if g.HasRolled {
 			sendErr("already rolled")
 			return
@@ -131,6 +135,24 @@ func (r *Room) GameTurn(conn interface {
 				select { case ch <- b: default: }
 			}
 		}
+	case "resign":
+		if win, _ := g.CheckWin(); win {
+			sendErr("game already over")
+			return
+		}
+		if r.Players[0] == "" || r.Players[1] == "" {
+			sendErr("waiting for opponent")
+			return
+		}
+		winnerIdx := 1 - idx
+		r.Scores[winnerIdx]++
+		r.Rematch = [2]bool{false, false}
+		r.Game.Off[winnerIdx] = 15
+		b, _ := json.Marshal(map[string]any{"t": "win", "winner": winnerIdx, "winnerName": r.Players[winnerIdx], "scores": r.Scores, "reason": "resign"})
+		for ch := range r.subs {
+			select { case ch <- b: default: }
+		}
+		r.broadcastStateLocked()
 	default:
 		sendErr("unknown t")
 	}

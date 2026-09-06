@@ -13,7 +13,7 @@ func TestConcurrentWriteNoPanic(t *testing.T) {
 	h.Join(r.Code, "bob")
 	// create per-conn channel as in wsHandler
 	ch := make(chan []byte, 16)
-	r.AddSub(ch)
+	r.AddSub(ch, "alice")
 	// start writer that would have been conn.WriteMessage
 	var wg sync.WaitGroup
 	wg.Add(1)

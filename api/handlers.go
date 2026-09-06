@@ -110,3 +110,23 @@ func HandleGetLobby(hub *lobby.Hub) http.HandlerFunc {
 		})
 	}
 }
+
+func HandleLeaveLobby(hub *lobby.Hub) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			http.Error(w, "method not allowed", 405)
+			return
+		}
+		user := usernameFromCookie(r)
+		if user == "" {
+			http.Error(w, "set username first", 401)
+			return
+		}
+		code := strings.ToUpper(strings.TrimPrefix(r.URL.Path, "/api/lobby/"))
+		code = strings.TrimSuffix(code, "/leave")
+		code = strings.TrimSuffix(code, "/LEAVE")
+		hub.Leave(code, user)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"ok": "left"})
+	}
+}

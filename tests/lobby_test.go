@@ -133,7 +133,7 @@ func TestWinBroadcast(t *testing.T) {
 	r.Game.MovesLeft = []int{1}
 	r.Game.Dice = [2]int{1, 2}
 	ch := make(chan []byte, 4)
-	r.AddSub(ch)
+	r.AddSub(ch, "alice")
 	mc := &mockConn{}
 	from, to, die := 0, -2, 1
 	r.GameTurn(mc, nil, "", 0, struct {

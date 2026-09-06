@@ -47,8 +47,11 @@ func wsHandler(hub *lobby.Hub) http.HandlerFunc {
 		defer conn.Close()
 
 		ch := make(chan []byte, 16)
-		room.AddSub(ch)
-		defer room.RemoveSub(ch)
+		room.AddSub(ch, user)
+		defer func() {
+			room.RemoveSub(ch)
+			hub.HandleDisconnect(code, user)
+		}()
 
 		// send initial state
 		room.BroadcastState()
@@ -106,6 +109,10 @@ func main() {
 	http.HandleFunc("/api/session", api.HandleSession)
 	http.HandleFunc("/api/lobby", api.HandleCreateLobby(hub))
 	http.HandleFunc("/api/lobby/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(strings.ToLower(r.URL.Path), "/leave") {
+			api.HandleLeaveLobby(hub)(w, r)
+			return
+		}
 		if strings.HasSuffix(strings.ToLower(r.URL.Path), "/join") {
 			api.HandleJoinLobby(hub)(w, r)
 			return

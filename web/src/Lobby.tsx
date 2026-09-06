@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { createLobby, joinLobby, setUsername } from './api'
 
 export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => void }) {
-  const [user, setUser] = useState('')
+  const [user, setUser] = useState(() => localStorage.getItem('user') ?? '')
   const [code, setCode] = useState('')
   const [created, setCreated] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
@@ -34,7 +34,7 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
 
   return (
     <div className="lobby" style={{ marginTop: '3vh' }}>
-      <input className="input user" placeholder="username" value={user} onChange={e => setUser(e.target.value)} maxLength={20} style={{ position: 'fixed', top: 12, left: 12, width: 200, textAlign: 'left', margin: 0, zIndex: 100 }} />
+      <input className="input user" placeholder="username" value={user} onChange={e => { setUser(e.target.value); localStorage.setItem('user', e.target.value) }} maxLength={20} style={{ position: 'fixed', top: 12, left: 12, width: 200, textAlign: 'left', margin: 0, zIndex: 100 }} />
       <h1 className="title" style={{ textAlign: 'center' }}>Fair Backgammon</h1>
 
 
