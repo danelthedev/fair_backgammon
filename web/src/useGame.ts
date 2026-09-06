@@ -14,6 +14,9 @@ export type ServerState = {
   lastMoves?: Move[]
   scores?: [number, number]
   rematch?: [boolean, boolean]
+  cube?: number
+  doubleOffer?: { by: number; stake: number } | null
+  doubledThisTurn?: boolean
 }
 
 export function useGame(code: string, username: string) {
@@ -100,6 +103,9 @@ export function useGame(code: string, username: string) {
             lastMoves: msg.lastMoves || [],
             scores: msg.scores || [0, 0],
             rematch: msg.rematch || [false, false],
+            cube: msg.cube ?? 1,
+            doubleOffer: msg.doubleOffer ?? null,
+            doubledThisTurn: msg.doubledThisTurn ?? false,
           })
           clearTimeout(timeout)
           setConnectionError(null)
@@ -176,11 +182,16 @@ export function useGame(code: string, username: string) {
   const addMove = (m: Move) => setPending((p) => [...p, m])
   const requestRematch = () => send({ t: 'rematch' })
   const requestResign = () => send({ t: 'resign' })
+  const requestDouble = () => send({ t: 'double' })
+  const respondDouble = (action: 'accept' | 'reject' | 'redouble') => send({ t: 'double_response', action })
 
   const myIdx = server ? server.players.indexOf(username) : -1
   const myTurn = server ? server.turn === myIdx : false
   const scores = server?.scores ?? [0, 0] as [number, number]
   const rematch = server?.rematch ?? [false, false] as [boolean, boolean]
+  const cube = server?.cube ?? 1
+  const doubleOffer = server?.doubleOffer ?? null
+  const doubledThisTurn = server?.doubledThisTurn ?? false
 
-  return { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, myTurn, myIdx, send, scores, rematch, requestRematch, requestResign, connectionError }
+  return { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, myTurn, myIdx, send, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn }
 }

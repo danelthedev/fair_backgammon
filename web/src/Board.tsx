@@ -37,11 +37,13 @@ function Dice({ v, rolling, used }: { v: number; rolling: boolean; used?: boolea
 }
 
 export function Board({ code, username, onLeave }: { code: string; username: string; onLeave: () => void }) {
-  const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, myTurn, scores, rematch, requestRematch, requestResign, connectionError } = useGame(code, username)
+  const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, myTurn, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn } = useGame(code, username)
   const { settings } = useSettings()
   const [selected, setSelected] = useState<number | null>(null)
   const [hover, setHover] = useState<number | null>(null)
   const [rolling, setRolling] = useState(false)
+  const [autoRoll, setAutoRoll] = useState(() => { try { return localStorage.getItem('fair_backgammon_autoroll') === '1' } catch { return false } })
+  const toggleAutoRoll = () => setAutoRoll(v => { const n = !v; try { localStorage.setItem('fair_backgammon_autoroll', n ? '1' : '0') } catch {} return n })
   const prevHasRolled = useRef(false)
   const isFirstRollRender = useRef(true)
   const boardRef = useRef<HTMLDivElement>(null)
@@ -64,6 +66,12 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     }
     prevHasRolled.current = !!server?.hasRolled
   }, [server?.hasRolled])
+  // ponytail: auto-roll fires once per turn start, delayed so double stays possible
+  useEffect(() => {
+    if (!autoRoll || !myTurn || winner || !server || server.hasRolled || rolling || animating || doubleOffer || !(server.players[0] && server.players[1])) return
+    const t = setTimeout(() => roll(), 1000)
+    return () => clearTimeout(t)
+  }, [autoRoll, myTurn, winner, server?.hasRolled, server?.turn, rolling, animating, doubleOffer, server?.players])
 
   const myIdx = server ? server.players.indexOf(username) : -1
 
@@ -447,6 +455,9 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   const offBottomIdx = isWhiteView ? 1 : 0
 
   const canConfirm = pending.length > 0 && !hasAnyLegal()
+  const stake = cube && cube > 1 ? cube : 1
+  const bothHere = !!(server.players[0] && server.players[1])
+  const canDouble = !winner && myTurn && !server.hasRolled && !animating && !rolling && bothHere && !doubleOffer && !doubledThisTurn && stake < 64
   const showDice = server.dice[0] !== 0
   const isDouble = showDice && server.dice[0] === server.dice[1]
   const diceValues = isDouble ? (Array(4).fill(server.dice[0]) as number[]) : ([...server.dice] as number[])
@@ -541,7 +552,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
                   ))}
                 </div>
               ) : (
-                <div className="dicePlaceholder">—</div>
+                <div className="dicePlaceholder">{doubleOffer && doubleOffer.by === myIdx ? 'Waiting for double…' : '—'}</div>
               )}
             </div>
             <div className="row bottom">{botLeft.map(i => renderPoint(i, false))}</div>
@@ -588,6 +599,18 @@ export function Board({ code, username, onLeave }: { code: string; username: str
             <div className="row bottom">{botRight.map(i => renderPoint(i, false))}</div>
           </div>
           {fly?.visible && <div className={`checker ${fly.color} fly`} style={{ left: fly.x, top: fly.y }} />}
+          {!winner && doubleOffer && doubleOffer.by !== myIdx && (
+            <div className="doubleOverlay">
+              <div className="doubleBox">
+                <div className="turn big">{server.players[doubleOffer.by] || 'Opponent'} doubles to {doubleOffer.stake}</div>
+                <button className="btn primary large" onClick={() => respondDouble('accept')}>Accept ×{doubleOffer.stake}</button>
+                {doubleOffer.stake < 64 && (
+                  <button className="btn ghost large" onClick={() => respondDouble('redouble')}>Re-double to ×{doubleOffer.stake * 2}</button>
+                )}
+                <button className="btn small ghost" onClick={() => respondDouble('reject')} style={{ color: '#f87171', borderColor: '#7f1d1d' }}>Reject (lose)</button>
+              </div>
+            </div>
+          )}
         </div>
         <div className={`offTray trough ${selected !== null && validDests.has(-2) ? 'canBearOff' : ''}`} onClick={() => { if (selected !== null && validDests.has(-2)) handleDest(-2) }}>
           <div className="troughInner">
@@ -596,7 +619,12 @@ export function Board({ code, username, onLeave }: { code: string; username: str
                 <div key={`o${offTopIdx}${i}`} className={`checker ${offTopIdx === 0 ? 'white' : 'black'} small`} />
               ))}
             </div>
-            <div className="troughCenter" aria-hidden />
+            <div className="troughCenter" style={{ position: 'relative' }}>
+              {canDouble && (
+                <button className="doubleBtn" onClick={requestDouble}>Double</button>
+              )}
+              <div className="cube" title={stake <= 1 ? 'No double yet' : `Stake ×${stake}`}>{stake <= 1 ? 64 : stake}</div>
+            </div>
             <div className={`offStack ${offBottomIdx === 0 ? 'white-trough' : 'black-trough'}`} data-off={offBottomIdx}>
               {Array.from({ length: display.off[offBottomIdx] }).map((_, i) => (
                 <div key={`o${offBottomIdx}${i}`} className={`checker ${offBottomIdx === 0 ? 'white' : 'black'} small`} />
@@ -605,13 +633,18 @@ export function Board({ code, username, onLeave }: { code: string; username: str
           </div>
         </div>
         <div className="sideBtn">
-          {!winner && myTurn && !server.hasRolled && !animating && !rolling && server.players[0] && server.players[1] ? (
+          {!winner && myTurn && !server.hasRolled && !animating && !rolling && !doubleOffer && !autoRoll && server.players[0] && server.players[1] ? (
             <button className="btn primary large" onClick={roll}>Roll</button>
           ) : !winner && pending.length > 0 ? (
             <button className="btn ghost large" onClick={undo}>Undo</button>
           ) : null}
           {canConfirm && !winner && (
             <button className="btn primary large" onClick={confirm} style={{ marginTop: 10 }}>Confirm</button>
+          )}
+          {!winner && (
+            <div className={`autoRoll ${autoRoll ? 'active' : ''}`} onClick={toggleAutoRoll} title="Roll automatically at turn start">
+              Auto-roll
+            </div>
           )}
         </div>
       </div>
