@@ -37,7 +37,7 @@ function Dice({ v, rolling, used }: { v: number; rolling: boolean; used?: boolea
 }
 
 export function Board({ code, username, onLeave }: { code: string; username: string; onLeave: () => void }) {
-  const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, myTurn, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn } = useGame(code, username)
+  const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, myTurn, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler } = useGame(code, username)
   const { settings } = useSettings()
   const [selected, setSelected] = useState<number | null>(null)
   const [hover, setHover] = useState<number | null>(null)
@@ -457,7 +457,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   const canConfirm = pending.length > 0 && !hasAnyLegal()
   const stake = cube && cube > 1 ? cube : 1
   const bothHere = !!(server.players[0] && server.players[1])
-  const canDouble = !winner && myTurn && !server.hasRolled && !animating && !rolling && bothHere && !doubleOffer && !doubledThisTurn && stake < 64
+  const canDouble = !winner && myTurn && !server.hasRolled && !animating && !rolling && bothHere && !doubleOffer && !doubledThisTurn && (lastDoubler ?? -1) !== myIdx && stake < 64
   const showDice = server.dice[0] !== 0
   const isDouble = showDice && server.dice[0] === server.dice[1]
   const diceValues = isDouble ? (Array(4).fill(server.dice[0]) as number[]) : ([...server.dice] as number[])
@@ -619,7 +619,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
                 <div key={`o${offTopIdx}${i}`} className={`checker ${offTopIdx === 0 ? 'white' : 'black'} small`} />
               ))}
             </div>
-            <div className="troughCenter" style={{ position: 'relative' }}>
+            <div className="troughCenter">
               {canDouble && (
                 <button className="doubleBtn" onClick={requestDouble}>Double</button>
               )}

@@ -17,6 +17,7 @@ export type ServerState = {
   cube?: number
   doubleOffer?: { by: number; stake: number } | null
   doubledThisTurn?: boolean
+  lastDoubler?: number
 }
 
 export function useGame(code: string, username: string) {
@@ -106,6 +107,7 @@ export function useGame(code: string, username: string) {
             cube: msg.cube ?? 1,
             doubleOffer: msg.doubleOffer ?? null,
             doubledThisTurn: msg.doubledThisTurn ?? false,
+            lastDoubler: msg.lastDoubler ?? -1,
           })
           clearTimeout(timeout)
           setConnectionError(null)
@@ -192,6 +194,7 @@ export function useGame(code: string, username: string) {
   const cube = server?.cube ?? 1
   const doubleOffer = server?.doubleOffer ?? null
   const doubledThisTurn = server?.doubledThisTurn ?? false
+  const lastDoubler = server?.lastDoubler ?? -1
 
-  return { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, myTurn, myIdx, send, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn }
+  return { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, myTurn, myIdx, send, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler }
 }
