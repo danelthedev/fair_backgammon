@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"fair_backgammon/api"
 	"fair_backgammon/lobby"
@@ -56,10 +57,34 @@ func wsHandler(hub *lobby.Hub) http.HandlerFunc {
 		// send initial state
 		room.BroadcastState()
 
+		// keep idle connections alive (proxies drop quiet sockets after ~55s)
+		conn.SetReadLimit(512)
+		conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		conn.SetPongHandler(func(string) error {
+			conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+			return nil
+		})
+		ping := time.NewTicker(25 * time.Second)
+		defer ping.Stop()
+
 		// writer loop
 		go func() {
-			for msg := range ch {
-				_ = conn.WriteMessage(websocket.TextMessage, msg)
+			for {
+				select {
+				case msg, ok := <-ch:
+					if !ok {
+						return
+					}
+					conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+					if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+						return
+					}
+				case <-ping.C:
+					conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+					if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+						return
+					}
+				}
 			}
 		}()
 
@@ -139,17 +164,20 @@ func main() {
 			http.NotFound(w, r)
 			return
 		}
-		// try exact file from embedded
-		if sub != nil {
-			if _, err := fs.Stat(sub, strings.TrimPrefix(r.URL.Path, "/")); err == nil {
+		// try exact file from embedded (entry point always goes through no-store fallback below)
+		p := strings.TrimPrefix(r.URL.Path, "/")
+		if p != "" && p != "index.html" && sub != nil {
+			if _, err := fs.Stat(sub, p); err == nil {
 				http.FileServer(http.FS(sub)).ServeHTTP(w, r)
 				return
 			}
 		}
 		// try filesystem (local dev / Heroku post-build)
-		if _, err := os.Stat("web/dist" + r.URL.Path); err == nil {
-			http.FileServer(http.Dir("web/dist")).ServeHTTP(w, r)
-			return
+		if p != "" && p != "index.html" {
+			if _, err := os.Stat("web/dist" + r.URL.Path); err == nil {
+				http.FileServer(http.Dir("web/dist")).ServeHTTP(w, r)
+				return
+			}
 		}
 		// fallback index
 		var b []byte

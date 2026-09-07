@@ -189,6 +189,17 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   const opponentIdx = myIdx === 0 ? 1 : 0
   const opponentName = server.players[opponentIdx] || 'waiting…'
   const myName = username
+  const pipCount = (board: number[], bar: number[], p: number) => {
+    let n = bar[p] * 25
+    for (let i = 0; i < 24; i++) {
+      const v = board[i]
+      if (p === 0 && v > 0) n += v * (i + 1)
+      if (p === 1 && v < 0) n += -v * (24 - i)
+    }
+    return n
+  }
+  const myPips = myIdx < 0 ? 0 : pipCount(display.board, display.bar, myIdx)
+  const oppPips = myIdx < 0 ? 0 : pipCount(display.board, display.bar, opponentIdx)
   const allInHome = (board: number[], bar: number[], p: number) => {
     if (bar[p] > 0) return false
     if (p === 0) return board.slice(6).every(v => v <= 0)
@@ -537,8 +548,14 @@ export function Board({ code, username, onLeave }: { code: string; username: str
 
       {error && <div className="error">{error}</div>}
       <div className="playerHeader">
-        <span className={`playerPill ${!myTurn ? 'active' : ''}`}>{opponentName} · {scores?.[opponentIdx] ?? 0}</span>
-        <span className={`playerPill you ${myTurn ? 'active' : ''}`}>{myName} · {scores?.[myIdx] ?? 0}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className={`playerPill ${!myTurn ? 'active' : ''}`}>{opponentName} · {scores?.[opponentIdx] ?? 0}</span>
+          <span className="pipCount">{oppPips}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="pipCount">{myPips}</span>
+          <span className={`playerPill you ${myTurn ? 'active' : ''}`}>{myName} · {scores?.[myIdx] ?? 0}</span>
+        </div>
       </div>
       <div className="boardRow">
         <div className="board" ref={boardRef} onContextMenu={e => e.preventDefault()} style={animating ? { pointerEvents: 'none' } : undefined}>

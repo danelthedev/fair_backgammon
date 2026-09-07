@@ -32,6 +32,7 @@ body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--whi
 .playerRail.left{left:-96px;transform:none}
 .playerRail.right{right:-96px;transform:none}
 .playerPill{font-weight:800;font-size:.95rem;padding:.5rem .9rem;border-radius:10px;background:var(--card);border:1px solid var(--line);color:var(--white);min-width:92px;text-align:center}
+.pipCount{font-weight:800;font-size:.9rem;opacity:.75;min-width:36px;text-align:center}
 .playerPill.active{border-color:var(--accent);color:var(--accent2);box-shadow:0 0 14px rgba(245,158,11,.25)}
 .playerPill.you.active{background:rgba(245,158,11,.12)}
 .playerSub{font-size:.75rem;opacity:.6;min-height:14px}
