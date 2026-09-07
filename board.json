@@ -1,0 +1,7 @@
+{
+  "_comment": "One roll from singles mart tehnic: 1 on each home point except pair on 6th, 8 off. Roll a 6 and bear one off the pair for six singles + 9 off, instant gammon.",
+  "board": [1, 1, 1, 1, 1, 2, 0, 0, 0, 0, 0, -5, 0, 0, 0, 0, -3, 0, -5, 0, 0, 0, 0, -2],
+  "bar": [0, 0],
+  "off": [8, 0],
+  "turn": 0
+}

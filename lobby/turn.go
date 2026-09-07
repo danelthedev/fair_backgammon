@@ -123,6 +123,21 @@ func (r *Room) GameTurn(conn interface {
 			}
 			r.broadcastStateLocked()
 		}
+		if ok, mult := g.CheckTechnicalWin(game.Player(idx)); ok {
+			wp := game.Player(idx)
+			r.Scores[wp] += mult * r.Stake()
+			r.Rematch = [2]bool{false, false}
+			r.DoubleOffer = nil
+			r.Game.Off[wp] = 15
+			b, _ := json.Marshal(map[string]any{"t": "win", "winner": wp, "winnerName": r.Players[wp], "scores": r.Scores, "reason": "tehnic"})
+			for ch := range r.subs {
+				select {
+				case ch <- b:
+				default:
+				}
+			}
+			r.broadcastStateLocked()
+		}
 	case "pass":
 		if r.DoubleOffer != nil {
 			sendErr("double offer pending")

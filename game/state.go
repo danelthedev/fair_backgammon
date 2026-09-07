@@ -11,10 +11,10 @@ import (
 type Player int
 
 const (
-	White Player = 0
-	Black Player = 1
-	BarPos       = -1
-	OffPos       = -2
+	White  Player = 0
+	Black  Player = 1
+	BarPos        = -1
+	OffPos        = -2
 )
 
 type Move struct {
@@ -349,4 +349,53 @@ func (g *Game) CheckWin() (bool, Player) {
 		return true, Black
 	}
 	return false, White
+}
+
+// CheckTechnicalWin reports marț tehnic for p: home holding exactly six
+// columns of 2 (3 borne off) or six columns of 1 (9 borne off), nothing
+// elsewhere. Instant win worth double.
+func (g *Game) CheckTechnicalWin(p Player) (bool, int) {
+	if g.Bar[p] > 0 {
+		return false, 0
+	}
+	if p == White {
+		home := 0
+		for i := 0; i < 24; i++ {
+			if v := g.Board[i]; v > 0 {
+				if i >= 6 {
+					return false, 0
+				}
+				home += v
+			}
+		}
+		if g.Off[White]+home != 15 || (home != 12 && home != 6) {
+			return false, 0
+		}
+		want := home / 6
+		for i := 0; i < 6; i++ {
+			if g.Board[i] != want {
+				return false, 0
+			}
+		}
+		return true, 2
+	}
+	home := 0
+	for i := 0; i < 24; i++ {
+		if v := g.Board[i]; v < 0 {
+			if i < 18 {
+				return false, 0
+			}
+			home -= v
+		}
+	}
+	if g.Off[Black]+home != 15 || (home != 12 && home != 6) {
+		return false, 0
+	}
+	want := -(home / 6)
+	for i := 18; i < 24; i++ {
+		if g.Board[i] != want {
+			return false, 0
+		}
+	}
+	return true, 2
 }
