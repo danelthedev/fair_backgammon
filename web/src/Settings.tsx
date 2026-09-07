@@ -9,6 +9,9 @@ const labels: Record<string, string> = {
   exterior: 'Exterior / border',
   whitePiece: 'White pieces',
   blackPiece: 'Black pieces',
+  pieceBorder: 'Piece border',
+  diceBase: 'Dice base',
+  diceDots: 'Dice dots',
 }
 
 export function SettingsButton() {

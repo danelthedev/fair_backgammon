@@ -9,6 +9,9 @@ export type BoardColors = {
   exterior: string
   whitePiece: string
   blackPiece: string
+  pieceBorder: string
+  diceBase: string
+  diceDots: string
 }
 
 export const defaultColors: BoardColors = {
@@ -19,6 +22,9 @@ export const defaultColors: BoardColors = {
   exterior: '#3e2723',
   whitePiece: '#fffaf0',
   blackPiece: '#1e1e1e',
+  pieceBorder: '#a0a0a0',
+  diceBase: '#ffffff',
+  diceDots: '#111111',
 }
 
 export type Settings = {
@@ -72,6 +78,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     r.style.setProperty('--exterior', settings.colors.exterior)
     r.style.setProperty('--white-piece', settings.colors.whitePiece)
     r.style.setProperty('--black-piece', settings.colors.blackPiece)
+    r.style.setProperty('--piece-border', settings.colors.pieceBorder)
+    r.style.setProperty('--dice-base', settings.colors.diceBase)
+    r.style.setProperty('--dice-dots', settings.colors.diceDots)
   }, [settings])
 
   useEffect(() => {
@@ -94,6 +103,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     r.style.setProperty('--exterior', settings.colors.exterior)
     r.style.setProperty('--white-piece', settings.colors.whitePiece)
     r.style.setProperty('--black-piece', settings.colors.blackPiece)
+    r.style.setProperty('--piece-border', settings.colors.pieceBorder)
+    r.style.setProperty('--dice-base', settings.colors.diceBase)
+    r.style.setProperty('--dice-dots', settings.colors.diceDots)
   }, [])
 
   const reset = () => setSettings(defaultSettings)
