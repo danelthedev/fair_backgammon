@@ -99,7 +99,7 @@ body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--whi
 .doubleOverlay{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);border-radius:16px}
 .doubleBox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;align-items:center;box-shadow:0 12px 32px rgba(0,0,0,.5)}
 .checker.small{width:26px;height:26px}
-.offStack .checker.small:not(:first-child){margin-top:-5px}
+.offStack .checker.small:not(:first-child){margin-top:-8px}
 .checker.fly{position:absolute;z-index:30;pointer-events:none;transition: left .38s ease, top .38s ease;box-shadow:0 8px 18px rgba(0,0,0,.6),inset 0 2px 3px rgba(255,255,255,.45)}
 .boardWrap{position:relative}
 .rematchBox{padding-right:42px}

@@ -146,7 +146,13 @@ func TestNoLegalPass(t *testing.T) {
 func legalList(g *game.Game) []game.Move {
 	var out []game.Move
 	for _, d := range g.MovesLeft {
-		for _, from := range append([]int{game.BarPos}, func() []int { a := make([]int, 24); for i := range a { a[i] = i }; return a }()...) {
+		for _, from := range append([]int{game.BarPos}, func() []int {
+			a := make([]int, 24)
+			for i := range a {
+				a[i] = i
+			}
+			return a
+		}()...) {
 			for to := -2; to < 24; to++ {
 				if to == -1 {
 					continue

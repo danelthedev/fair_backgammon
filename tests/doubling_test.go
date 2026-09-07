@@ -79,8 +79,8 @@ func TestDoubleOncePerTurn(t *testing.T) {
 	act := "accept"
 	r.GameTurn(mc, nil, "", 1, turnMsg{T: "double_response", Action: &act})
 	r.GameTurn(mc, nil, "", 0, turnMsg{T: "double"})
-	if mc.lastErr() != "already doubled this turn" {
-		t.Fatalf("want already doubled, got %q", mc.lastErr())
+	if mc.lastErr() != "wait for opponent to double" {
+		t.Fatalf("want wait, got %q", mc.lastErr())
 	}
 	// turn switch clears the flag: empty board has no legal moves after roll
 	r.Game.Board = [24]int{}
@@ -125,5 +125,45 @@ func TestDoubleOfferBroadcastToBoth(t *testing.T) {
 	}
 	if int(last["cube"].(float64)) != 1 {
 		t.Fatalf("cube should still be 1 until accept, got %v", last["cube"])
+	}
+}
+
+func TestDoubleAlternatesBetweenPlayers(t *testing.T) {
+	h := lobby.NewHub()
+	r := h.Create("alice")
+	h.Join(r.Code, "bob")
+	mc := &mockConn{}
+	r.GameTurn(mc, nil, "", 0, turnMsg{T: "double"})
+	act := "accept"
+	r.GameTurn(mc, nil, "", 1, turnMsg{T: "double_response", Action: &act})
+	if r.Cube != 2 || r.LastDoubler != 0 {
+		t.Fatalf("after accept cube=%d lastDoubler=%d", r.Cube, r.LastDoubler)
+	}
+	r.GameTurn(mc, nil, "", 0, turnMsg{T: "double"})
+	if mc.lastErr() != "wait for opponent to double" {
+		t.Fatalf("want wait, got %q", mc.lastErr())
+	}
+	// redouble auto-accepts: fresh offer from A, B answers "double again"
+	h2 := lobby.NewHub()
+	r2 := h2.Create("alice")
+	h2.Join(r2.Code, "bob")
+	r2.GameTurn(mc, nil, "", 0, turnMsg{T: "double"})
+	act = "redouble"
+	r2.GameTurn(mc, nil, "", 1, turnMsg{T: "double_response", Action: &act})
+	if r2.Cube != 4 || r2.DoubleOffer != nil || r2.LastDoubler != 0 {
+		t.Fatalf("redouble should auto-accept at 4x, cube=%d offer=%+v lastDoubler=%d", r2.Cube, r2.DoubleOffer, r2.LastDoubler)
+	}
+	// B doubles on B's turn (turn switch resets per-turn flag, LastDoubler still 0)
+	r2.Game.Turn = 1
+	r2.Game.HasRolled = false
+	r2.DoubledThisTurn = false
+	r2.GameTurn(mc, nil, "", 1, turnMsg{T: "double"})
+	if r2.DoubleOffer == nil || r2.DoubleOffer.Stake != 8 || r2.LastDoubler != 1 {
+		t.Fatalf("B double bad offer=%+v lastDoubler=%d", r2.DoubleOffer, r2.LastDoubler)
+	}
+	act = "accept"
+	r2.GameTurn(mc, nil, "", 0, turnMsg{T: "double_response", Action: &act})
+	if r2.Cube != 8 {
+		t.Fatalf("cube=%d want 8", r2.Cube)
 	}
 }

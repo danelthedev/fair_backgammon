@@ -23,6 +23,7 @@ type Room struct {
 	Cube            int
 	DoubleOffer     *DoubleOffer
 	DoubledThisTurn bool
+	LastDoubler     int
 
 	mu        sync.Mutex
 	subs      map[chan []byte]struct{}
@@ -45,6 +46,7 @@ func (h *Hub) Create(username string) *Room {
 	r := &Room{Code: code, Game: game.NewGame(), subs: make(map[chan []byte]struct{}), userSubs: make(map[chan []byte]string), connCount: make(map[string]int)}
 	r.Players[0] = username
 	r.Cube = 1
+	r.LastDoubler = -1
 	h.games[code] = r
 	return r
 }
@@ -151,6 +153,7 @@ func (r *Room) BroadcastState() {
 		"cube":            r.Cube,
 		"doubleOffer":     r.DoubleOffer,
 		"doubledThisTurn": r.DoubledThisTurn,
+		"lastDoubler":     r.LastDoubler,
 	})
 	for ch := range r.subs {
 		select {

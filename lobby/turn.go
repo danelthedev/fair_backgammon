@@ -151,6 +151,7 @@ func (r *Room) GameTurn(conn interface {
 			r.Cube = 1
 			r.DoubleOffer = nil
 			r.DoubledThisTurn = false
+			r.LastDoubler = -1
 			// swap colors on rematch
 			r.Players[0], r.Players[1] = r.Players[1], r.Players[0]
 			r.Scores[0], r.Scores[1] = r.Scores[1], r.Scores[0]
@@ -204,6 +205,10 @@ func (r *Room) GameTurn(conn interface {
 			sendErr("double already offered")
 			return
 		}
+		if r.LastDoubler == idx {
+			sendErr("wait for opponent to double")
+			return
+		}
 		if r.DoubledThisTurn {
 			sendErr("already doubled this turn")
 			return
@@ -214,6 +219,7 @@ func (r *Room) GameTurn(conn interface {
 		}
 		r.DoubleOffer = &DoubleOffer{By: idx, Stake: r.Stake() * 2}
 		r.DoubledThisTurn = true
+		r.LastDoubler = idx
 		r.broadcastStateLocked()
 	case "double_response":
 		if r.DoubleOffer == nil {
@@ -269,7 +275,7 @@ func (r *Room) broadcastStateLocked() {
 	msg, _ := json.Marshal(map[string]any{
 		"t": "state", "code": r.Code, "board": r.Game.Board, "bar": r.Game.Bar, "off": r.Game.Off,
 		"turn": r.Game.Turn, "dice": r.Game.Dice, "movesLeft": r.Game.MovesLeft, "hasRolled": r.Game.HasRolled, "players": r.Players, "lastMoves": r.LastMoves,
-		"scores": r.Scores, "rematch": r.Rematch, "cube": r.Cube, "doubleOffer": r.DoubleOffer, "doubledThisTurn": r.DoubledThisTurn,
+		"scores": r.Scores, "rematch": r.Rematch, "cube": r.Cube, "doubleOffer": r.DoubleOffer, "doubledThisTurn": r.DoubledThisTurn, "lastDoubler": r.LastDoubler,
 	})
 	for ch := range r.subs {
 		select {
