@@ -15,7 +15,7 @@ const labels: Record<string, string> = {
 }
 
 export function SettingsButton() {
-  const { settings, update, updateColor, reset } = useSettings()
+  const { settings, update, updateColor, reset, randomize } = useSettings()
   const [open, setOpen] = useState(false)
 
   return (
@@ -63,7 +63,10 @@ export function SettingsButton() {
               <span style={{ fontSize: '0.85rem', opacity: 0.9, flex: 1 }}>{label}</span>
             </div>
           ))}
-          <button className="btn small ghost" onClick={reset} style={{ marginTop: 4 }}>
+          <button className="btn small ghost" onClick={randomize} style={{ marginTop: 4 }}>
+            Randomize all colors
+          </button>
+          <button className="btn small ghost" onClick={reset}>
             Reset colors to default
           </button>
         </div>

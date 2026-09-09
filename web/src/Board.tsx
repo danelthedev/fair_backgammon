@@ -37,7 +37,7 @@ function Dice({ v, rolling, used }: { v: number; rolling: boolean; used?: boolea
 }
 
 export function Board({ code, username, onLeave }: { code: string; username: string; onLeave: () => void }) {
-  const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, myTurn, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler } = useGame(code, username)
+  const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler } = useGame(code, username)
   const { settings } = useSettings()
   const [selected, setSelected] = useState<number | null>(null)
   const [hover, setHover] = useState<number | null>(null)
@@ -535,7 +535,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   return (
     <div className="boardWrap" onContextMenu={e => e.preventDefault()}>
       <div className="topBar">
-        {winner ? <span className="turn big">{winner} wins! {scores?.[0] ?? 0}-{scores?.[1] ?? 0}</span> : !(server.players[0] && server.players[1]) ? <span className="codePill">{code}</span> : <span />}
+        {winner ? <span className="turn big">{winner} wins{winReason === 'gammon' || winReason === 'backgammon' ? ` by ${winReason}` : ''}! {scores?.[0] ?? 0}-{scores?.[1] ?? 0}</span> : !(server.players[0] && server.players[1]) ? <span className="codePill">{code}</span> : <span />}
         <div style={{ display: 'flex', gap: '8px' }}>
           {!winner && server.players[0] && server.players[1] && (
             <button className="btn small ghost" onClick={requestResign} style={{ color: '#f87171', borderColor: '#7f1d1d' }}>

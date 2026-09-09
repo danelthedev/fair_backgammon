@@ -27,6 +27,7 @@ export function useGame(code: string, username: string) {
   const [pending, setPending] = useState<Move[]>([])
   const [error, setError] = useState<string | null>(null)
   const [winner, setWinner] = useState<string | null>(null)
+  const [winReason, setWinReason] = useState<string | null>(null)
   const [connectionError, setConnectionError] = useState<string | null>(null)
   useEffect(() => { serverRef.current = server }, [server])
   const prevPlayersRef = useRef<string[] | null>(null)
@@ -114,7 +115,7 @@ export function useGame(code: string, username: string) {
           if (msg.scores && msg.rematch && !msg.rematch[0] && !msg.rematch[1] && msg.board) {
             const off0 = msg.off?.[0] ?? 0
             const off1 = msg.off?.[1] ?? 0
-            if (off0 < 15 && off1 < 15) setWinner(null)
+            if (off0 < 15 && off1 < 15) { setWinner(null); setWinReason(null) }
           }
           if ((msg.players[0] === "" || msg.players[1] === "") && msg.players.includes(username)) {
             const oppIdx = msg.players[0] === username ? 1 : 0
@@ -133,7 +134,9 @@ export function useGame(code: string, username: string) {
           const name = msg.winnerName ?? serverRef.current?.players[msg.winner] ?? `Player ${msg.winner}`
           setWinner(name)
           setPending([])
-          setError(`${name} wins!`)
+          const reason = msg.reason === 'gammon' || msg.reason === 'backgammon' ? msg.reason : msg.reason ? String(msg.reason) : null
+          setWinReason(reason)
+          setError(reason === 'gammon' || reason === 'backgammon' ? `${name} wins by ${reason}!` : `${name} wins!`)
         } else if (msg.t === 'rematch') {
           if (msg.scores) {
             setServer(s => s ? { ...s, scores: msg.scores, rematch: msg.rematch } : s)
@@ -142,6 +145,7 @@ export function useGame(code: string, username: string) {
           setConnectionError("Opponent left the game")
           setError("Opponent left")
           setWinner(null)
+          setWinReason(null)
           setPending([])
         }
       } catch {}
@@ -196,5 +200,5 @@ export function useGame(code: string, username: string) {
   const doubledThisTurn = server?.doubledThisTurn ?? false
   const lastDoubler = server?.lastDoubler ?? -1
 
-  return { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, myTurn, myIdx, send, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler }
+  return { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, myIdx, send, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler }
 }

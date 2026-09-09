@@ -43,6 +43,7 @@ type Ctx = {
   settings: Settings
   setSettings: React.Dispatch<React.SetStateAction<Settings>>
   reset: () => void
+  randomize: () => void
   update: (patch: Partial<Settings>) => void
   updateColor: (key: keyof BoardColors, value: string) => void
   defaultColors: BoardColors
@@ -109,11 +110,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const reset = () => setSettings(defaultSettings)
+  // ponytail: one random hex per color key, no lib
+  const randomize = () => setSettings(s => ({ ...s, colors: Object.fromEntries(Object.keys(s.colors).map(k => [k, '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0')])) as BoardColors }))
   const update = (patch: Partial<Settings>) => setSettings(s => ({ ...s, ...patch }))
   const updateColor = (key: keyof BoardColors, value: string) =>
     setSettings(s => ({ ...s, colors: { ...s.colors, [key]: value } }))
-
-  return <SettingsContext.Provider value={{ settings, setSettings, reset, update, updateColor, defaultColors }}>{children}</SettingsContext.Provider>
+  return <SettingsContext.Provider value={{ settings, setSettings, reset, randomize, update, updateColor, defaultColors }}>{children}</SettingsContext.Provider>
 }
 
 export function useSettings() {
@@ -125,6 +127,7 @@ export function useSettings() {
     setSettings: (() => {}) as any,
     reset: () => {},
     update: () => {},
+    randomize: () => {},
     updateColor: () => {},
     defaultColors,
   }
