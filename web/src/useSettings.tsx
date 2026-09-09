@@ -35,6 +35,8 @@ export type Settings = {
   whitePieceImage: string | null // dataURL, local only
   blackPieceImage: string | null // dataURL, local only
   diceImage: string | null // dataURL, local only
+  triImage: string | null // dataURL, local only
+  triImageAlpha: number // 0-100, triangle image overlay opacity
 }
 const defaultSettings: Settings = {
   swapClicks: false,
@@ -44,6 +46,8 @@ const defaultSettings: Settings = {
   whitePieceImage: null,
   blackPieceImage: null,
   diceImage: null,
+  triImage: null,
+  triImageAlpha: 100,
 }
 
 const KEY = 'fair_backgammon_settings'
@@ -88,6 +92,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     r.style.setProperty('--white-piece-image', settings.whitePieceImage ? `url("${settings.whitePieceImage}")` : 'none')
     r.style.setProperty('--black-piece-image', settings.blackPieceImage ? `url("${settings.blackPieceImage}")` : 'none')
     r.style.setProperty('--dice-image', settings.diceImage ? `url("${settings.diceImage}")` : 'none')
+    r.style.setProperty('--tri-image', settings.triImage ? `url("${settings.triImage}")` : 'none')
+    r.style.setProperty('--tri-image-alpha', String((settings.triImageAlpha ?? 100) / 100))
     r.style.setProperty('--tri-light', settings.colors.triLight)
     r.style.setProperty('--tri-dark', settings.colors.triDark)
     r.style.setProperty('--exterior', settings.colors.exterior)
@@ -118,6 +124,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     r.style.setProperty('--white-piece-image', settings.whitePieceImage ? `url("${settings.whitePieceImage}")` : 'none')
     r.style.setProperty('--black-piece-image', settings.blackPieceImage ? `url("${settings.blackPieceImage}")` : 'none')
     r.style.setProperty('--dice-image', settings.diceImage ? `url("${settings.diceImage}")` : 'none')
+    r.style.setProperty('--tri-image', settings.triImage ? `url("${settings.triImage}")` : 'none')
+    r.style.setProperty('--tri-image-alpha', String((settings.triImageAlpha ?? 100) / 100))
     r.style.setProperty('--tri-light', settings.colors.triLight)
     r.style.setProperty('--tri-dark', settings.colors.triDark)
     r.style.setProperty('--exterior', settings.colors.exterior)

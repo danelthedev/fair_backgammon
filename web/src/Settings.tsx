@@ -176,6 +176,42 @@ export function SettingsButton() {
               )}
             </div>
           ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }} title="Image over all triangles">
+            <span style={{ fontSize: '0.85rem', opacity: 0.9, flex: 1 }}>Triangles image</span>
+            <label className="btn small ghost" style={{ cursor: 'pointer', padding: '2px 6px' }}>
+              🖼
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={e => {
+                  const f = e.target.files?.[0]
+                  e.target.value = ''
+                  if (f) fileToFieldImage(f).then(d => update({ triImage: d })).catch(() => {})
+                }}
+              />
+            </label>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={settings.triImageAlpha ?? 100}
+              onChange={e => update({ triImageAlpha: Number(e.target.value) })}
+              style={{ width: 64, cursor: 'pointer' }}
+              aria-label="Triangles image opacity"
+            />
+            <span style={{ fontSize: '0.75rem', opacity: 0.7, minWidth: 30 }}>{settings.triImageAlpha ?? 100}%</span>
+            {settings.triImage && (
+              <button
+                className="btn small ghost"
+                style={{ padding: '2px 6px' }}
+                onClick={() => update({ triImage: null })}
+                title="Remove image"
+              >
+                ✕
+              </button>
+            )}
+          </div>
           <button className="btn small ghost" onClick={randomize} style={{ marginTop: 4 }}>
             Randomize all colors
           </button>
