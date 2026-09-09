@@ -79,3 +79,29 @@ func TestTehnicSinglesAndCubeAndBar(t *testing.T) {
 		t.Fatal("uneven columns should not trigger")
 	}
 }
+func TestTehnicNotMidTurn(t *testing.T) {
+	h := lobby.NewHub()
+	r := h.Create("alice")
+	h.Join(r.Code, "bob")
+	// 3 on point 6, 2 elsewhere, 2 already off; roll 6-5 bears off 6 then 5
+	r.Game.Board = [24]int{2, 2, 2, 2, 2, 3}
+	r.Game.Bar = [2]int{}
+	r.Game.Off = [2]int{2, 0}
+	r.Game.Turn = 0
+	r.Game.HasRolled = true
+	r.Game.MovesLeft = []int{6, 5}
+	mc := &mockConn{}
+	from, to, die := 5, -2, 6
+	r.GameTurn(mc, nil, "", 0, turnMsg{T: "move", From: &from, To: &to, Die: &die})
+	if r.Scores[0] != 0 || r.Game.Off[0] != 3 {
+		t.Fatalf("mid-turn tehnic must not fire: scores=%v off=%v", r.Scores, r.Game.Off)
+	}
+	from, to, die = 4, -2, 5
+	r.GameTurn(mc, nil, "", 0, turnMsg{T: "move", From: &from, To: &to, Die: &die})
+	if r.Scores[0] != 0 || r.Game.Off[0] != 4 {
+		t.Fatalf("broken pattern must not win: scores=%v off=%v", r.Scores, r.Game.Off)
+	}
+	if r.Game.Turn != 1 {
+		t.Fatalf("turn should pass, got %v", r.Game.Turn)
+	}
+}

@@ -76,10 +76,11 @@ func (r *Room) GameTurn(conn interface {
 		}
 		r.broadcastStateLocked()
 		if win, w := g.CheckWin(); win {
-			r.Scores[w] += r.Stake()
+			mult := g.WinMultiplier(w)
+			r.Scores[w] += mult * r.Stake()
 			r.Rematch = [2]bool{false, false}
 			r.DoubleOffer = nil
-			b, _ := json.Marshal(map[string]any{"t": "win", "winner": w, "winnerName": r.Players[w], "scores": r.Scores})
+			b, _ := json.Marshal(map[string]any{"t": "win", "winner": w, "winnerName": r.Players[w], "scores": r.Scores, "reason": g.WinReason(w), "mult": mult})
 			for ch := range r.subs {
 				select {
 				case ch <- b:
@@ -103,7 +104,9 @@ func (r *Room) GameTurn(conn interface {
 			return
 		}
 		r.LastMoves = append(r.LastMoves, m)
-		if len(g.MovesLeft) == 0 || !g.HasAnyLegal() {
+		// ponytail: tehnic pattern valid only at turn end, mid-turn dice may pass through it
+		turnEnded := len(g.MovesLeft) == 0 || !g.HasAnyLegal()
+		if turnEnded {
 			g.MovesLeft = nil
 			g.HasRolled = false
 			g.Turn = 1 - g.Turn
@@ -111,10 +114,11 @@ func (r *Room) GameTurn(conn interface {
 		}
 		r.broadcastStateLocked()
 		if win, w := g.CheckWin(); win {
-			r.Scores[w] += r.Stake()
+			mult := g.WinMultiplier(w)
+			r.Scores[w] += mult * r.Stake()
 			r.Rematch = [2]bool{false, false}
 			r.DoubleOffer = nil
-			b, _ := json.Marshal(map[string]any{"t": "win", "winner": w, "winnerName": r.Players[w], "scores": r.Scores})
+			b, _ := json.Marshal(map[string]any{"t": "win", "winner": w, "winnerName": r.Players[w], "scores": r.Scores, "reason": g.WinReason(w), "mult": mult})
 			for ch := range r.subs {
 				select {
 				case ch <- b:
@@ -123,7 +127,8 @@ func (r *Room) GameTurn(conn interface {
 			}
 			r.broadcastStateLocked()
 		}
-		if ok, mult := g.CheckTechnicalWin(game.Player(idx)); ok {
+		if turnEnded {
+			if ok, mult := g.CheckTechnicalWin(game.Player(idx)); ok {
 			wp := game.Player(idx)
 			r.Scores[wp] += mult * r.Stake()
 			r.Rematch = [2]bool{false, false}
@@ -137,6 +142,7 @@ func (r *Room) GameTurn(conn interface {
 				}
 			}
 			r.broadcastStateLocked()
+			}
 		}
 	case "pass":
 		if r.DoubleOffer != nil {

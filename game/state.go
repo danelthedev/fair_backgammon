@@ -351,6 +351,45 @@ func (g *Game) CheckWin() (bool, Player) {
 	return false, White
 }
 
+// WinMultiplier reports standard backgammon payout for winner w:
+// 3 = backgammon (loser bore off none and has man on bar or in winner home),
+// 2 = gammon (loser bore off none), else 1.
+func (g *Game) WinMultiplier(w Player) int {
+	l := 1 - w
+	if g.Off[l] > 0 {
+		return 1
+	}
+	if g.Bar[l] > 0 {
+		return 3
+	}
+	if w == White {
+		for i := 0; i < 6; i++ {
+			if g.Board[i] < 0 {
+				return 3
+			}
+		}
+	} else {
+		for i := 18; i < 24; i++ {
+			if g.Board[i] > 0 {
+				return 3
+			}
+		}
+	}
+	return 2
+}
+
+// WinReason labels WinMultiplier: "" single, "gammon", "backgammon".
+func (g *Game) WinReason(w Player) string {
+	switch g.WinMultiplier(w) {
+	case 3:
+		return "backgammon"
+	case 2:
+		return "gammon"
+	default:
+		return ""
+	}
+}
+
 // CheckTechnicalWin reports marț tehnic for p: home holding exactly six
 // columns of 2 (3 borne off) or six columns of 1 (9 borne off), nothing
 // elsewhere. Instant win worth double.
