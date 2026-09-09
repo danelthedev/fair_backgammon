@@ -142,7 +142,7 @@ describe('Board', () => {
   it('dice dots and roll anim', () => {
     mockUseGame.mockReturnValue({
       server: mockServer({ dice: [3, 3], hasRolled: true }),
-      local: { board: Array(24).fill(0), bar: [0, 0], off: [0, 0] },
+      local: { board: (() => { const b = Array(24).fill(0); b[10] = 1; return b })(), bar: [0, 0], off: [0, 0] },
       pending: [],
       movesLeft: [3, 3, 3, 3],
       roll: vi.fn(),
@@ -158,6 +158,28 @@ describe('Board', () => {
     expect(container.querySelectorAll('.pip-dot.on').length).toBeGreaterThan(0)
     // 4 dice for double, none used yet
     expect(container.querySelectorAll('.die.used').length).toBe(0)
+  })
+  it('unplayable die greyed from start', () => {
+    // white on 10: 3 blocked (7 held by black), 5 open -> 3 grey, 5 active
+    const b = Array(24).fill(0)
+    b[10] = 1
+    b[7] = -2
+    mockUseGame.mockReturnValue({
+      server: mockServer({ dice: [3, 5], hasRolled: true }),
+      local: { board: b, bar: [0, 0], off: [0, 0] },
+      pending: [],
+      movesLeft: [3, 5],
+      roll: vi.fn(),
+      confirm: vi.fn(),
+      undo: vi.fn(),
+      addMove: vi.fn(),
+      error: null,
+      winner: null,
+      myTurn: true,
+    })
+    const { container } = render(<Board code="TEST" username="alice" onLeave={() => {}} />)
+    expect(container.querySelectorAll('.die').length).toBe(2)
+    expect(container.querySelectorAll('.die.used').length).toBe(1)
   })
 
   it('dice used gray and double 4', () => {

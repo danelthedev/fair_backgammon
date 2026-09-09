@@ -259,6 +259,18 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     }
     return false
   }
+  // ponytail: single-die version for greying out unplayable dice
+  const canPlayDie = (die: number) => {
+    if (!local || !myTurn || !server.hasRolled) return false
+    for (let from = -1; from < 24; from++) {
+      if (from === -1 && local.bar[myIdx] === 0) continue
+      for (let to = -2; to < 24; to++) {
+        if (to === -1) continue
+        if (isLegal(from, to, die)) return true
+      }
+    }
+    return false
+  }
 
   const source = selected !== null ? selected : hover
   const combinedMap = (() => {
@@ -473,11 +485,13 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   const isDouble = showDice && server.dice[0] === server.dice[1]
   const diceValues = isDouble ? (Array(4).fill(server.dice[0]) as number[]) : ([...server.dice] as number[])
   const remainingForDice = [...movesLeft]
+  // ponytail: dice with no legal move from current spot grey out immediately
+  const deadValues = new Set(movesLeft.filter(d => !canPlayDie(d)))
   const diceUsed = diceValues.map((v: number) => {
     const idx = remainingForDice.indexOf(v)
     if (idx !== -1) {
       remainingForDice.splice(idx, 1)
-      return false
+      return deadValues.has(v)
     }
     return true
   })
