@@ -486,7 +486,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   const diceValues = isDouble ? (Array(4).fill(server.dice[0]) as number[]) : ([...server.dice] as number[])
   const remainingForDice = [...movesLeft]
   // ponytail: dice with no legal move from current spot grey out immediately
-  const deadValues = new Set(movesLeft.filter(d => !canPlayDie(d)))
+  const deadValues = myTurn && server.hasRolled ? new Set(movesLeft.filter(d => !canPlayDie(d))) : new Set<number>()
   const diceUsed = diceValues.map((v: number) => {
     const idx = remainingForDice.indexOf(v)
     if (idx !== -1) {

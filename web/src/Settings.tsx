@@ -13,6 +13,24 @@ const labels: Record<string, string> = {
   diceBase: 'Dice base',
   diceDots: 'Dice dots',
 }
+// ponytail: downscale to <=1024px jpeg so the dataURL fits localStorage
+function fileToFieldImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      const s = Math.min(1, 1024 / Math.max(img.width, img.height))
+      const c = document.createElement('canvas')
+      c.width = Math.max(1, Math.round(img.width * s))
+      c.height = Math.max(1, Math.round(img.height * s))
+      c.getContext('2d')?.drawImage(img, 0, 0, c.width, c.height)
+      URL.revokeObjectURL(url)
+      resolve(c.toDataURL('image/jpeg', 0.85))
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('bad image')) }
+    img.src = url
+  })
+}
 
 export function SettingsButton() {
   const { settings, update, updateColor, reset, randomize } = useSettings()
@@ -61,8 +79,45 @@ export function SettingsButton() {
                 aria-label={label}
               />
               <span style={{ fontSize: '0.85rem', opacity: 0.9, flex: 1 }}>{label}</span>
+              {key === 'boardField' && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }} title="Field image opacity">
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={settings.boardFieldAlpha}
+                    onChange={e => update({ boardFieldAlpha: Number(e.target.value) })}
+                    style={{ width: 64, cursor: 'pointer' }}
+                    aria-label="Field image opacity"
+                  />
+                  <span style={{ fontSize: '0.75rem', opacity: 0.7, minWidth: 30 }}>{settings.boardFieldAlpha}%</span>
+                </span>
+              )}
             </div>
           ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label className="btn small ghost" style={{ cursor: 'pointer', flex: 1, textAlign: 'center' }}>
+              🖼 Field image
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={e => {
+                  const f = e.target.files?.[0]
+                  e.target.value = ''
+                  if (f) fileToFieldImage(f).then(d => update({ boardFieldImage: d })).catch(() => {})
+                }}
+              />
+            </label>
+            {settings.boardFieldImage && (
+              <button className="btn small ghost" onClick={() => update({ boardFieldImage: null })} title="Remove image">
+                ✕
+              </button>
+            )}
+          </div>
+          {settings.boardFieldImage && (
+            <img src={settings.boardFieldImage} alt="" style={{ width: '100%', height: 48, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--line)' }} />
+          )}
           <button className="btn small ghost" onClick={randomize} style={{ marginTop: 4 }}>
             Randomize all colors
           </button>

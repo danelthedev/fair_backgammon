@@ -30,11 +30,15 @@ export const defaultColors: BoardColors = {
 export type Settings = {
   swapClicks: boolean
   colors: BoardColors
+  boardFieldAlpha: number // 0-100, color overlay opacity over field image
+  boardFieldImage: string | null // dataURL, local only
 }
 
 const defaultSettings: Settings = {
   swapClicks: false,
   colors: defaultColors,
+  boardFieldAlpha: 100,
+  boardFieldImage: null,
 }
 
 const KEY = 'fair_backgammon_settings'
@@ -74,6 +78,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const r = document.documentElement
     r.style.setProperty('--board-base', settings.colors.boardBase)
     r.style.setProperty('--board-field', settings.colors.boardField)
+    r.style.setProperty('--board-field-image', settings.boardFieldImage ? `url("${settings.boardFieldImage}")` : 'none')
+    r.style.setProperty('--field-image-alpha', String(settings.boardFieldAlpha / 100))
     r.style.setProperty('--tri-light', settings.colors.triLight)
     r.style.setProperty('--tri-dark', settings.colors.triDark)
     r.style.setProperty('--exterior', settings.colors.exterior)
@@ -99,6 +105,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const r = document.documentElement
     r.style.setProperty('--board-base', settings.colors.boardBase)
     r.style.setProperty('--board-field', settings.colors.boardField)
+    r.style.setProperty('--board-field-image', settings.boardFieldImage ? `url("${settings.boardFieldImage}")` : 'none')
+    r.style.setProperty('--field-image-alpha', String(settings.boardFieldAlpha / 100))
     r.style.setProperty('--tri-light', settings.colors.triLight)
     r.style.setProperty('--tri-dark', settings.colors.triDark)
     r.style.setProperty('--exterior', settings.colors.exterior)
