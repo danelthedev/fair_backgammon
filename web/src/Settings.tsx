@@ -93,31 +93,89 @@ export function SettingsButton() {
                   <span style={{ fontSize: '0.75rem', opacity: 0.7, minWidth: 30 }}>{settings.boardFieldAlpha}%</span>
                 </span>
               )}
+              {(key === 'whitePiece' || key === 'blackPiece') && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }} title={key === 'whitePiece' ? 'White piece image' : 'Black piece image'}>
+                  <label className="btn small ghost" style={{ cursor: 'pointer', padding: '2px 6px' }}>
+                    🖼
+                    <input
+                      type="file"
+                      accept="image/*"
+                      hidden
+                      onChange={e => {
+                        const f = e.target.files?.[0]
+                        e.target.value = ''
+                        if (f) fileToFieldImage(f).then(d => update(key === 'whitePiece' ? { whitePieceImage: d } : { blackPieceImage: d })).catch(() => {})
+                      }}
+                    />
+                  </label>
+                  {(key === 'whitePiece' ? settings.whitePieceImage : settings.blackPieceImage) && (
+                    <button
+                      className="btn small ghost"
+                      style={{ padding: '2px 6px' }}
+                      onClick={() => update(key === 'whitePiece' ? { whitePieceImage: null } : { blackPieceImage: null })}
+                      title="Remove image"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </span>
+              )}
+              {key === 'boardField' && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }} title="Field image">
+                  <label className="btn small ghost" style={{ cursor: 'pointer', padding: '2px 6px' }}>
+                    🖼
+                    <input
+                      type="file"
+                      accept="image/*"
+                      hidden
+                      onChange={e => {
+                        const f = e.target.files?.[0]
+                        e.target.value = ''
+                        if (f) fileToFieldImage(f).then(d => update({ boardFieldImage: d })).catch(() => {})
+                      }}
+                    />
+                  </label>
+                  {settings.boardFieldImage && (
+                    <button
+                      className="btn small ghost"
+                      style={{ padding: '2px 6px' }}
+                      onClick={() => update({ boardFieldImage: null })}
+                      title="Remove image"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </span>
+              )}
+              {key === 'diceBase' && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }} title="Dice image">
+                  <label className="btn small ghost" style={{ cursor: 'pointer', padding: '2px 6px' }}>
+                    🖼
+                    <input
+                      type="file"
+                      accept="image/*"
+                      hidden
+                      onChange={e => {
+                        const f = e.target.files?.[0]
+                        e.target.value = ''
+                        if (f) fileToFieldImage(f).then(d => update({ diceImage: d })).catch(() => {})
+                      }}
+                    />
+                  </label>
+                  {settings.diceImage && (
+                    <button
+                      className="btn small ghost"
+                      style={{ padding: '2px 6px' }}
+                      onClick={() => update({ diceImage: null })}
+                      title="Remove image"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </span>
+              )}
             </div>
           ))}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <label className="btn small ghost" style={{ cursor: 'pointer', flex: 1, textAlign: 'center' }}>
-              🖼 Field image
-              <input
-                type="file"
-                accept="image/*"
-                hidden
-                onChange={e => {
-                  const f = e.target.files?.[0]
-                  e.target.value = ''
-                  if (f) fileToFieldImage(f).then(d => update({ boardFieldImage: d })).catch(() => {})
-                }}
-              />
-            </label>
-            {settings.boardFieldImage && (
-              <button className="btn small ghost" onClick={() => update({ boardFieldImage: null })} title="Remove image">
-                ✕
-              </button>
-            )}
-          </div>
-          {settings.boardFieldImage && (
-            <img src={settings.boardFieldImage} alt="" style={{ width: '100%', height: 48, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--line)' }} />
-          )}
           <button className="btn small ghost" onClick={randomize} style={{ marginTop: 4 }}>
             Randomize all colors
           </button>

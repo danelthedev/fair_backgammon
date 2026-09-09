@@ -30,15 +30,20 @@ export const defaultColors: BoardColors = {
 export type Settings = {
   swapClicks: boolean
   colors: BoardColors
-  boardFieldAlpha: number // 0-100, color overlay opacity over field image
+  boardFieldAlpha: number // 0-100, field image overlay opacity
   boardFieldImage: string | null // dataURL, local only
+  whitePieceImage: string | null // dataURL, local only
+  blackPieceImage: string | null // dataURL, local only
+  diceImage: string | null // dataURL, local only
 }
-
 const defaultSettings: Settings = {
   swapClicks: false,
   colors: defaultColors,
   boardFieldAlpha: 100,
   boardFieldImage: null,
+  whitePieceImage: null,
+  blackPieceImage: null,
+  diceImage: null,
 }
 
 const KEY = 'fair_backgammon_settings'
@@ -80,6 +85,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     r.style.setProperty('--board-field', settings.colors.boardField)
     r.style.setProperty('--board-field-image', settings.boardFieldImage ? `url("${settings.boardFieldImage}")` : 'none')
     r.style.setProperty('--field-image-alpha', String(settings.boardFieldAlpha / 100))
+    r.style.setProperty('--white-piece-image', settings.whitePieceImage ? `url("${settings.whitePieceImage}")` : 'none')
+    r.style.setProperty('--black-piece-image', settings.blackPieceImage ? `url("${settings.blackPieceImage}")` : 'none')
+    r.style.setProperty('--dice-image', settings.diceImage ? `url("${settings.diceImage}")` : 'none')
     r.style.setProperty('--tri-light', settings.colors.triLight)
     r.style.setProperty('--tri-dark', settings.colors.triDark)
     r.style.setProperty('--exterior', settings.colors.exterior)
@@ -107,6 +115,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     r.style.setProperty('--board-field', settings.colors.boardField)
     r.style.setProperty('--board-field-image', settings.boardFieldImage ? `url("${settings.boardFieldImage}")` : 'none')
     r.style.setProperty('--field-image-alpha', String(settings.boardFieldAlpha / 100))
+    r.style.setProperty('--white-piece-image', settings.whitePieceImage ? `url("${settings.whitePieceImage}")` : 'none')
+    r.style.setProperty('--black-piece-image', settings.blackPieceImage ? `url("${settings.blackPieceImage}")` : 'none')
+    r.style.setProperty('--dice-image', settings.diceImage ? `url("${settings.diceImage}")` : 'none')
     r.style.setProperty('--tri-light', settings.colors.triLight)
     r.style.setProperty('--tri-dark', settings.colors.triDark)
     r.style.setProperty('--exterior', settings.colors.exterior)
