@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGame } from './useGame'
 import { useSettings } from './useSettings'
+import { playDice, playMove, playTurn } from './sound'
 
 function checkerColor(_v: number, idx: number, _top: boolean) {
   return idx % 2 === 0 ? 'tri dark' : 'tri light'
@@ -39,6 +40,7 @@ function Dice({ v, rolling, used }: { v: number; rolling: boolean; used?: boolea
 export function Board({ code, username, onLeave }: { code: string; username: string; onLeave: () => void }) {
   const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler } = useGame(code, username)
   const { settings } = useSettings()
+  const vol = (settings.volume ?? 100) / 100
   const [selected, setSelected] = useState<number | null>(null)
   const [hover, setHover] = useState<number | null>(null)
   const [rolling, setRolling] = useState(false)
@@ -59,6 +61,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
       return
     }
     if (server?.hasRolled && !prevHasRolled.current) {
+      playDice(settings.sound, vol)
       setRolling(true)
       const t = setTimeout(() => setRolling(false), 600)
       prevHasRolled.current = true
@@ -72,6 +75,12 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     const t = setTimeout(() => roll(), 1000)
     return () => clearTimeout(t)
   }, [autoRoll, myTurn, winner, server?.hasRolled, server?.turn, rolling, animating, doubleOffer, server?.players])
+  // ponytail: notify at turn start; deferred to anim end when opponent moves play
+  const prevTurn = useRef(server?.turn)
+  useEffect(() => {
+    if (prevTurn.current !== undefined && server && server.turn !== prevTurn.current && server.players[server.turn] === username && server.players[0] && server.players[1] && !server.lastMoves?.length) playTurn(settings.sound, vol)
+    prevTurn.current = server?.turn
+  }, [server?.turn])
 
   const myIdx = server ? server.players.indexOf(username) : -1
 
@@ -174,10 +183,11 @@ export function Board({ code, username, onLeave }: { code: string; username: str
           if (mover === 0) curBoard[m.to]++; else curBoard[m.to]--
         } else curOff[mover]++
         setAnimBoard({ board: [...curBoard], bar: [...curBar], off: [...curOff] })
+        playMove(settings.sound, vol)
         setFly(null)
         await new Promise(r => setTimeout(r, 120))
       }
-      if (!cancelled) { setAnimBoard(null); setAnimMoves(null); setFly(null) }
+      if (!cancelled) { await new Promise(r => setTimeout(r, 700)); if (!cancelled) { setAnimBoard(null); setAnimMoves(null); setFly(null); playTurn(settings.sound, vol) } }
     })()
     return () => { cancelled = true }
   }, [animMoves])
@@ -430,6 +440,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     if (combinedMap.has(to)) {
       const seq = combinedMap.get(to)!
       seq.forEach(m => addMove(m))
+      playMove(settings.sound, vol)
       setSelected(null)
       return
     }
@@ -437,6 +448,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     for (const d of sorted) {
       if (isLegal(selected, to, d)) {
         addMove({ from: selected, to, die: d })
+        playMove(settings.sound, vol)
         setSelected(null)
         return
       }
@@ -460,6 +472,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
         if (to === -1) continue
         if (isLegal(from, to, d)) {
           addMove({ from, to, die: d })
+          playMove(settings.sound, vol)
           setSelected(null)
           return
         }

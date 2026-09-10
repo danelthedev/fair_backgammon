@@ -68,6 +68,20 @@ export function SettingsButton() {
             <input type="checkbox" checked={settings.swapClicks} onChange={e => update({ swapClicks: e.target.checked })} />
             Swap left / right click
           </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem', cursor: 'pointer' }}>
+            <input type="checkbox" checked={settings.sound} onChange={e => update({ sound: e.target.checked })} />
+            <span style={{ whiteSpace: 'nowrap', fontSize: '0.9rem' }}>Sound effects</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={settings.volume ?? 100}
+              onChange={e => update({ volume: Number(e.target.value) })}
+              style={{ width: 80, cursor: 'pointer' }}
+              aria-label="Sound volume"
+            />
+            <span style={{ fontSize: '0.75rem', opacity: 0.7, minWidth: 30 }}>{settings.volume ?? 100}%</span>
+          </label>
           <div style={{ height: 1, background: 'var(--line)', opacity: 0.5 }} />
           {Object.entries(labels).map(([key, label]) => (
             <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 8 }}>

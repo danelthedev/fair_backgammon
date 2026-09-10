@@ -29,6 +29,8 @@ export const defaultColors: BoardColors = {
 
 export type Settings = {
   swapClicks: boolean
+  sound: boolean
+  volume: number // 0-100 master gain
   colors: BoardColors
   boardFieldAlpha: number // 0-100, field image overlay opacity
   boardFieldImage: string | null // dataURL, local only
@@ -40,6 +42,8 @@ export type Settings = {
 }
 const defaultSettings: Settings = {
   swapClicks: false,
+  sound: true,
+  volume: 100,
   colors: defaultColors,
   boardFieldAlpha: 100,
   boardFieldImage: null,
