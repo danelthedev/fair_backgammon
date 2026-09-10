@@ -574,6 +574,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
       </div>
 
       {error && <div className="error">{error}</div>}
+      {!winner && <div className="hint" style={{ textAlign: 'center', margin: '0 0 6px' }}>{settings.swapClicks ? 'Tap a column to move · long-press to select' : 'Tap a column, then tap destination · long-press to quick-move'}</div>}
       <div className="playerHeader">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span className={`playerPill ${!myTurn ? 'active' : ''}`}>{opponentName} · {scores?.[opponentIdx] ?? 0}</span>
