@@ -23,9 +23,17 @@ const groups: { title: string; keys: (keyof BoardColors)[] }[] = [
   { title: 'Dice', keys: ['diceBase', 'diceDots'] },
 ]
 
-// ponytail: downscale to <=1024px jpeg so the dataURL fits localStorage
+// ponytail: GIF passthrough preserves animation (canvas would flatten to frame 1); 2MB cap keeps dataURL inside localStorage quota
 function fileToFieldImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
+    if (file.type === 'image/gif') {
+      if (file.size > 2 * 1024 * 1024) { reject(new Error('gif too big (max 2MB)')); return }
+      const r = new FileReader()
+      r.onload = () => resolve(String(r.result))
+      r.onerror = () => reject(new Error('bad image'))
+      r.readAsDataURL(file)
+      return
+    }
     const url = URL.createObjectURL(file)
     const img = new Image()
     img.onload = () => {
@@ -130,6 +138,7 @@ export function SettingsButton() {
   const [open, setOpen] = useState(false)
   const [audioErr, setAudioErr] = useState<string | null>(null)
   const [ioErr, setIoErr] = useState<string | null>(null)
+  const [imgErr, setImgErr] = useState<string | null>(null)
 
   // ponytail: settings already hold images + sounds as dataURLs, plain JSON round-trips
   const exportSettings = () => {
@@ -155,6 +164,9 @@ export function SettingsButton() {
     }
     r.onerror = () => setIoErr('bad settings file')
     r.readAsText(f)
+  }
+  const saveImg = (f: File, patch: (d: string) => void) => {
+    fileToFieldImage(f).then(d => { setImgErr(null); patch(d) }).catch((err: Error) => setImgErr(err.message))
   }
 
   return (
@@ -252,7 +264,7 @@ export function SettingsButton() {
                       <ImgBtn
                         title="Field image"
                         has={!!settings.boardFieldImage}
-                        onFile={f => fileToFieldImage(f).then(d => update({ boardFieldImage: d })).catch(() => {})}
+                        onFile={f => saveImg(f, d => update({ boardFieldImage: d }))}
                         onClear={() => update({ boardFieldImage: null })}
                       />
                     </>
@@ -261,7 +273,7 @@ export function SettingsButton() {
                     <ImgBtn
                       title={key === 'whitePiece' ? 'White piece image' : 'Black piece image'}
                       has={!!(key === 'whitePiece' ? settings.whitePieceImage : settings.blackPieceImage)}
-                      onFile={f => fileToFieldImage(f).then(d => update(key === 'whitePiece' ? { whitePieceImage: d } : { blackPieceImage: d })).catch(() => {})}
+                      onFile={f => saveImg(f, d => update(key === 'whitePiece' ? { whitePieceImage: d } : { blackPieceImage: d }))}
                       onClear={() => update(key === 'whitePiece' ? { whitePieceImage: null } : { blackPieceImage: null })}
                     />
                   )}
@@ -269,7 +281,7 @@ export function SettingsButton() {
                     <ImgBtn
                       title="Dice image"
                       has={!!settings.diceImage}
-                      onFile={f => fileToFieldImage(f).then(d => update({ diceImage: d })).catch(() => {})}
+                      onFile={f => saveImg(f, d => update({ diceImage: d }))}
                       onClear={() => update({ diceImage: null })}
                     />
                   )}
@@ -282,7 +294,7 @@ export function SettingsButton() {
                   <ImgBtn
                     title="Triangles image"
                     has={!!settings.triImage}
-                    onFile={f => fileToFieldImage(f).then(d => update({ triImage: d })).catch(() => {})}
+                    onFile={f => saveImg(f, d => update({ triImage: d }))}
                     onClear={() => update({ triImage: null })}
                   />
                 </div>
@@ -290,6 +302,7 @@ export function SettingsButton() {
             </Section>
           ))}
 
+            {imgErr && <div className="hint" style={{ color: '#f87171' }}>{imgErr}</div>}
           <Section title="Backup">
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn small ghost" onClick={exportSettings} style={{ flex: 1 }}>
