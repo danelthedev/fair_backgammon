@@ -80,7 +80,7 @@ function ColorRow({ label, value, onChange, children }: { label: string; value: 
         style={{ width: 32, height: 28, padding: 0, border: '1px solid var(--line)', borderRadius: 6, cursor: 'pointer', background: 'transparent', flexShrink: 0 }}
         aria-label={label}
       />
-      <span style={{ fontSize: '0.85rem', opacity: 0.9, flex: 1 }}>{label}</span>
+      <span style={{ fontSize: '0.85rem', opacity: 0.9, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
       {children}
     </div>
   )
@@ -103,7 +103,7 @@ function Alpha({ value, onChange, label }: { value: number; onChange: (v: number
   )
 }
 
-function ImgBtn({ title, onFile, onClear, has }: { title: string; onFile: (f: File) => void; onClear: () => void; has: boolean }) {
+function ImgBtn({ title, onFile, onUrl, onClear, has }: { title: string; onFile: (f: File) => void; onUrl: (u: string) => void; onClear: () => void; has: boolean }) {
   return (
     <span style={{ display: 'flex', alignItems: 'center', gap: 4 }} title={title}>
       <label className="btn small ghost" style={{ cursor: 'pointer', padding: '2px 6px' }}>
@@ -119,6 +119,7 @@ function ImgBtn({ title, onFile, onClear, has }: { title: string; onFile: (f: Fi
           }}
         />
       </label>
+      <button className="btn small ghost" style={{ padding: '2px 6px' }} title="Paste image URL" onClick={() => { const u = window.prompt('Paste image URL (https://…)')?.trim(); if (u) onUrl(u) }}>🔗</button>
       {has && (
         <button
           className="btn small ghost"
@@ -168,6 +169,17 @@ export function SettingsButton() {
   const saveImg = (f: File, patch: (d: string) => void) => {
     fileToFieldImage(f).then(d => { setImgErr(null); patch(d) }).catch((err: Error) => setImgErr(err.message))
   }
+  // ponytail: remote URL bypasses localStorage quota (stores ~100 chars, not MBs); https + data: only so http mixed-content and javascript: CSS breakout can't sneak in
+  const saveUrl = (u: string, patch: (d: string) => void) => {
+    const clean = u.trim().replace(/^["']|["']$/g, '')
+    if (!/^https:\/\/|^data:image\//.test(clean)) { setImgErr('URL must start with https://'); return }
+    if (clean.includes('"') || clean.includes('\\')) { setImgErr('bad URL'); return }
+    setImgErr(null)
+    const img = new Image()
+    img.onload = () => { setImgErr(null); patch(clean) }
+    img.onerror = () => setImgErr('URL failed to load — need a direct image link, or the host blocks hotlinking')
+    img.src = clean
+  }
 
   return (
     <div style={{ position: 'fixed', top: 12, right: 12, zIndex: 100 }}>
@@ -185,10 +197,11 @@ export function SettingsButton() {
             position: 'absolute',
             top: '42px',
             right: 0,
-            width: 300,
+            width: 380,
             maxWidth: 'calc(100vw - 24px)',
             maxHeight: 'calc(100dvh - 70px)',
             overflowY: 'auto',
+            overflowX: 'hidden',
             background: 'var(--card)',
             border: '1px solid var(--line)',
             borderRadius: 12,
@@ -265,6 +278,7 @@ export function SettingsButton() {
                         title="Field image"
                         has={!!settings.boardFieldImage}
                         onFile={f => saveImg(f, d => update({ boardFieldImage: d }))}
+                        onUrl={u => saveUrl(u, d => update({ boardFieldImage: d }))}
                         onClear={() => update({ boardFieldImage: null })}
                       />
                     </>
@@ -274,6 +288,7 @@ export function SettingsButton() {
                       title={key === 'whitePiece' ? 'White piece image' : 'Black piece image'}
                       has={!!(key === 'whitePiece' ? settings.whitePieceImage : settings.blackPieceImage)}
                       onFile={f => saveImg(f, d => update(key === 'whitePiece' ? { whitePieceImage: d } : { blackPieceImage: d }))}
+                      onUrl={u => saveUrl(u, d => update(key === 'whitePiece' ? { whitePieceImage: d } : { blackPieceImage: d }))}
                       onClear={() => update(key === 'whitePiece' ? { whitePieceImage: null } : { blackPieceImage: null })}
                     />
                   )}
@@ -282,6 +297,7 @@ export function SettingsButton() {
                       title="Dice image"
                       has={!!settings.diceImage}
                       onFile={f => saveImg(f, d => update({ diceImage: d }))}
+                      onUrl={u => saveUrl(u, d => update({ diceImage: d }))}
                       onClear={() => update({ diceImage: null })}
                     />
                   )}
@@ -289,12 +305,13 @@ export function SettingsButton() {
               ))}
               {g.title === 'Board' && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }} title="Image over all triangles">
-                  <span style={{ fontSize: '0.85rem', opacity: 0.9, flex: 1 }}>Triangles image</span>
+                  <span style={{ fontSize: '0.85rem', opacity: 0.9, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Triangles image</span>
                   <Alpha label="Triangles image" value={settings.triImageAlpha ?? 100} onChange={v => update({ triImageAlpha: v })} />
                   <ImgBtn
                     title="Triangles image"
                     has={!!settings.triImage}
                     onFile={f => saveImg(f, d => update({ triImage: d }))}
+                    onUrl={u => saveUrl(u, d => update({ triImage: d }))}
                     onClear={() => update({ triImage: null })}
                   />
                 </div>
