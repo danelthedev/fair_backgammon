@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import type { SoundName } from './sound'
 
 export type BoardColors = {
   boardBase: string
@@ -39,8 +40,9 @@ export type Settings = {
   diceImage: string | null // dataURL, local only
   triImage: string | null // dataURL, local only
   triImageAlpha: number // 0-100, triangle image overlay opacity
+  customSounds: Partial<Record<SoundName, string>> // dataURL overrides, local only
 }
-const defaultSettings: Settings = {
+export const defaultSettings: Settings = {
   swapClicks: false,
   sound: true,
   volume: 100,
@@ -52,6 +54,7 @@ const defaultSettings: Settings = {
   diceImage: null,
   triImage: null,
   triImageAlpha: 100,
+  customSounds: {},
 }
 
 const KEY = 'fair_backgammon_settings'

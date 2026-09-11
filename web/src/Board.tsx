@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGame } from './useGame'
 import { useSettings } from './useSettings'
-import { playDice, playMove, playTurn } from './sound'
+import { playCapture, playDice, playMove, playTurn } from './sound'
 
 function checkerColor(_v: number, idx: number, _top: boolean) {
   return idx % 2 === 0 ? 'tri dark' : 'tri light'
@@ -61,7 +61,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
       return
     }
     if (server?.hasRolled && !prevHasRolled.current) {
-      playDice(settings.sound, vol)
+      sfx.dice()
       setRolling(true)
       const t = setTimeout(() => setRolling(false), 600)
       prevHasRolled.current = true
@@ -78,12 +78,19 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   // ponytail: notify at turn start; deferred to anim end when opponent moves play
   const prevTurn = useRef(server?.turn)
   useEffect(() => {
-    if (prevTurn.current !== undefined && server && server.turn !== prevTurn.current && server.players[server.turn] === username && server.players[0] && server.players[1] && !server.lastMoves?.length) playTurn(settings.sound, vol)
+    if (prevTurn.current !== undefined && server && server.turn !== prevTurn.current && server.players[server.turn] === username && server.players[0] && server.players[1] && !server.lastMoves?.length) sfx.turn()
     prevTurn.current = server?.turn
   }, [server?.turn])
 
   const myIdx = server ? server.players.indexOf(username) : -1
 
+  // ponytail: capture knock instead of slide when a blot gets hit
+  const sfx = {
+    move: (hit = false) => (hit ? playCapture : playMove)(settings.sound, vol, settings.customSounds?.[hit ? 'capture' : 'move']),
+    dice: () => playDice(settings.sound, vol, settings.customSounds?.dice),
+    turn: () => playTurn(settings.sound, vol, settings.customSounds?.turn),
+  }
+  const isHit = (to: number) => !!local && to !== -2 && to >= 0 && to < 24 && (myIdx === 0 ? local.board[to] === -1 : local.board[to] === 1)
   useEffect(() => {
     setSelected(null)
   }, [server?.turn])
@@ -119,6 +126,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
       const color = mover === 0 ? 'white' : 'black'
       for (const m of animMoves.moves) {
         if (cancelled) break
+        const landedHit = m.to !== -2 && m.to >= 0 && ((mover === 0 && curBoard[m.to] === -1) || (mover === 1 && curBoard[m.to] === 1))
         const fromEl = m.from === -1 ? boardEl.querySelector(`[data-bar="${mover}"]`) as HTMLElement : boardEl.querySelector(`[data-idx="${m.from}"]`) as HTMLElement
         const toEl = m.to === -2 ? document.querySelector(`[data-off="${mover}"]`) as HTMLElement : boardEl.querySelector(`[data-idx="${m.to}"]`) as HTMLElement
         if (!fromEl || !toEl) {
@@ -132,6 +140,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
             if (mover === 0) curBoard[m.to]++; else curBoard[m.to]--
           } else curOff[mover]++
           setAnimBoard({ board: [...curBoard], bar: [...curBar], off: [...curOff] })
+          sfx.move(landedHit)
           continue
         }
         const br = boardEl.getBoundingClientRect()
@@ -183,11 +192,11 @@ export function Board({ code, username, onLeave }: { code: string; username: str
           if (mover === 0) curBoard[m.to]++; else curBoard[m.to]--
         } else curOff[mover]++
         setAnimBoard({ board: [...curBoard], bar: [...curBar], off: [...curOff] })
-        playMove(settings.sound, vol)
+        sfx.move(landedHit)
         setFly(null)
         await new Promise(r => setTimeout(r, 120))
       }
-      if (!cancelled) { await new Promise(r => setTimeout(r, 700)); if (!cancelled) { setAnimBoard(null); setAnimMoves(null); setFly(null); playTurn(settings.sound, vol) } }
+      if (!cancelled) { await new Promise(r => setTimeout(r, 700)); if (!cancelled) { setAnimBoard(null); setAnimMoves(null); setFly(null); sfx.turn() } }
     })()
     return () => { cancelled = true }
   }, [animMoves])
@@ -440,7 +449,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     if (combinedMap.has(to)) {
       const seq = combinedMap.get(to)!
       seq.forEach(m => addMove(m))
-      playMove(settings.sound, vol)
+      sfx.move(seq.some(m => isHit(m.to)))
       setSelected(null)
       return
     }
@@ -448,7 +457,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     for (const d of sorted) {
       if (isLegal(selected, to, d)) {
         addMove({ from: selected, to, die: d })
-        playMove(settings.sound, vol)
+        sfx.move(isHit(to))
         setSelected(null)
         return
       }
@@ -472,7 +481,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
         if (to === -1) continue
         if (isLegal(from, to, d)) {
           addMove({ from, to, die: d })
-          playMove(settings.sound, vol)
+          sfx.move(isHit(to))
           setSelected(null)
           return
         }
@@ -569,7 +578,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
               Resign
             </button>
           )}
-          <button className="btn small ghost" onClick={onLeave}>leave</button>
+          <button className="btn small ghost" onClick={onLeave}>Leave</button>
         </div>
       </div>
 
