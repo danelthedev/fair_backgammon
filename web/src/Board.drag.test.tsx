@@ -73,4 +73,65 @@ describe('click select', () => {
     fireEvent.click(point)
     expect(container.querySelectorAll('.dot.show').length).toBeGreaterThan(0)
   })
+
+  describe('hold and drag', () => {
+    const dragSetup = (addMove: any) => {
+      const board = Array(24).fill(0)
+      board[5] = 2
+      mockUseGame.mockReturnValue({
+        server: { board, bar: [0, 0], off: [0, 0], turn: 0, dice: [3, 4], movesLeft: [3, 4], hasRolled: true, players: ['alice', 'bob'], code: 'TEST' },
+        local: { board, bar: [0, 0], off: [0, 0] },
+        pending: [],
+        movesLeft: [3, 4],
+        roll: vi.fn(),
+        confirm: vi.fn(),
+        undo: vi.fn(),
+        addMove,
+        error: null,
+        winner: null,
+        myTurn: true,
+      } as any)
+    }
+    const doDrag = (from: HTMLElement, to: HTMLElement | null) => {
+      ;(document as any).elementFromPoint = vi.fn().mockReturnValue(to)
+      fireEvent.pointerDown(from, { pointerId: 1, button: 0, clientX: 10, clientY: 10 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: 60, clientY: 60 })
+      fireEvent.pointerUp(window, { pointerId: 1, clientX: 60, clientY: 60 })
+      ;(document as any).elementFromPoint = undefined
+    }
+
+    it('drag to valid dest calls addMove once, follow-up click eaten', () => {
+      const addMove = vi.fn()
+      dragSetup(addMove)
+      const { container } = render(<Board code="TEST" username="alice" onLeave={() => {}} />)
+      const from = container.querySelector('[data-idx="5"]') as HTMLElement
+      const dest = container.querySelector('[data-idx="2"]') as HTMLElement
+      doDrag(from, dest)
+      expect(addMove).toHaveBeenCalledTimes(1)
+      fireEvent.click(dest) // browser click after pointerup
+      expect(addMove).toHaveBeenCalledTimes(1)
+    })
+
+    it('drag to invalid dest moves nothing', () => {
+      const addMove = vi.fn()
+      dragSetup(addMove)
+      const { container } = render(<Board code="TEST" username="alice" onLeave={() => {}} />)
+      const from = container.querySelector('[data-idx="5"]') as HTMLElement
+      const bad = container.querySelector('[data-idx="10"]') as HTMLElement
+      doDrag(from, bad)
+      expect(addMove).not.toHaveBeenCalled()
+    })
+
+    it('plain tap without move still clicks', () => {
+      const addMove = vi.fn()
+      dragSetup(addMove)
+      const { container } = render(<Board code="TEST" username="alice" onLeave={() => {}} />)
+      const from = container.querySelector('[data-idx="5"]') as HTMLElement
+      fireEvent.pointerDown(from, { pointerId: 1, button: 0, clientX: 10, clientY: 10 })
+      fireEvent.pointerUp(window, { pointerId: 1, clientX: 10, clientY: 10 })
+      fireEvent.click(from)
+      expect(container.querySelectorAll('.dot.show').length).toBeGreaterThan(0)
+      expect(addMove).not.toHaveBeenCalled()
+    })
+  })
 })

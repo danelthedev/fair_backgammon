@@ -54,6 +54,12 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   const [animMoves, setAnimMoves] = useState<{ moves: { from: number; to: number; die: number }[]; mover: number } | null>(null)
   const [fly, setFly] = useState<{ x: number; y: number; color: string; visible: boolean; from: number } | null>(null)
   const animating = !!animBoard
+  // ponytail: drag feeds the same select/dest path as click, no parallel rules
+  const [drag, setDrag] = useState<{ from: number; x: number; y: number; touch: boolean } | null>(null)
+  const suppressRef = useRef(false)
+  const dragOnRef = useRef(false)
+  const candRef = useRef<{ from: number; x0: number; y0: number; id: number } | null>(null)
+  const apiRef = useRef<{ canStart: (f: number) => boolean; target: (x: number, y: number) => number | null; drop: (f: number, t: number) => void }>({ canStart: () => false, target: () => null, drop: () => {} })
   useEffect(() => {
     if (isFirstRollRender.current) {
       isFirstRollRender.current = false
@@ -200,6 +206,59 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     })()
     return () => { cancelled = true }
   }, [animMoves])
+
+  // ponytail: window-level move/up so drops outside the board still resolve; hooks live above early returns
+  useEffect(() => {
+    const TH = 8
+    const onMove = (e: PointerEvent) => {
+      const c = candRef.current
+      if (!c || e.pointerId !== c.id) return
+      if (!dragOnRef.current) {
+        if (Math.hypot(e.clientX - c.x0, e.clientY - c.y0) < TH) return
+        if (!apiRef.current.canStart(c.from)) { candRef.current = null; return }
+        dragOnRef.current = true
+        suppressRef.current = true
+        setSelected(c.from)
+        setDrag({ from: c.from, x: e.clientX, y: e.clientY, touch: e.pointerType === 'touch' || e.pointerType === 'pen' })
+        return
+      }
+      setDrag(d => (d ? { ...d, x: e.clientX, y: e.clientY } : d))
+      const t = apiRef.current.target(e.clientX, e.clientY)
+      setHover(t !== null && t >= 0 ? t : null)
+    }
+    const onUp = (e: PointerEvent) => {
+      const c = candRef.current
+      if (!c || e.pointerId !== c.id) return
+      candRef.current = null
+      if (!dragOnRef.current) return // plain tap, onClick handles it
+      dragOnRef.current = false
+      setDrag(null)
+      setHover(null)
+      setSelected(null)
+      setTimeout(() => { suppressRef.current = false }, 0) // eaten tap may never come
+      const t = apiRef.current.target(e.clientX, e.clientY)
+      if (t !== null) apiRef.current.drop(c.from, t)
+    }
+    const onAbort = () => {
+      if (!candRef.current && !dragOnRef.current) return
+      candRef.current = null
+      dragOnRef.current = false
+      suppressRef.current = false
+      setDrag(null)
+      setHover(null)
+      setSelected(null)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onAbort)
+    window.addEventListener('blur', onAbort)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onAbort)
+      window.removeEventListener('blur', onAbort)
+    }
+  }, [])
 
   if (connectionError) return <div className="boardWrap loading"><div className="error">{connectionError}</div><button className="btn small ghost" onClick={onLeave} style={{ marginTop: 12 }}>Back to lobby</button></div>
   if (!server || !local) return <div className="boardWrap loading">connecting...</div>
@@ -443,26 +502,61 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     setSelected(from)
   }
 
-  const handleDest = (to: number) => {
+  // ponytail: explicit-from core so drag drops don't depend on select timing
+  const handleDestFrom = (from: number, to: number) => {
     if (winner || animating || rolling) return
-    if (selected === null) return
     if (combinedMap.has(to)) {
       const seq = combinedMap.get(to)!
-      seq.forEach(m => addMove(m))
-      sfx.move(seq.some(m => isHit(m.to)))
-      setSelected(null)
-      return
+      if (seq.length > 0 && seq[0].from === from) {
+        seq.forEach(m => addMove(m))
+        sfx.move(seq.some(m => isHit(m.to)))
+        setSelected(null)
+        return
+      }
     }
     const sorted = [...movesLeft].sort((a: number, b: number) => b - a)
     for (const d of sorted) {
-      if (isLegal(selected, to, d)) {
-        addMove({ from: selected, to, die: d })
+      if (isLegal(from, to, d)) {
+        addMove({ from, to, die: d })
         sfx.move(isHit(to))
         setSelected(null)
         return
       }
     }
   }
+  const handleDest = (to: number) => {
+    if (selected === null) return
+    handleDestFrom(selected, to)
+  }
+
+  // ponytail: drag reuses click guards; legality still enforced inside handleDestFrom
+  const canDragFrom = (from: number) => {
+    if (!server || !local) return false
+    if (winner || animating || rolling) return false
+    if (!myTurn || !server.hasRolled) return false
+    if (from === -1) return local.bar[myIdx] > 0
+    if (from < 0 || from >= 24) return false
+    const v = local.board[from]
+    return myIdx === 0 ? v > 0 : v < 0
+  }
+  const dropTarget = (x: number, y: number): number | null => {
+    if (typeof document.elementFromPoint !== 'function') return null
+    const el = document.elementFromPoint(x, y)
+    const t = el?.closest?.('[data-idx],[data-off]')
+    if (!t) return null
+    return t.hasAttribute('data-idx') ? Number(t.getAttribute('data-idx')) : -2
+  }
+  apiRef.current = { canStart: canDragFrom, target: dropTarget, drop: handleDestFrom }
+  const beginCandidate = (e: React.PointerEvent, from: number) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return
+    if (candRef.current) return
+    candRef.current = { from, x0: e.clientX, y0: e.clientY, id: e.pointerId }
+  }
+  const consumeTap = () => {
+    if (suppressRef.current) { suppressRef.current = false; return true }
+    return false
+  }
+
 
   // ponytail: right-click = biggest single-die legal move from that column
   const handleRightClick = (from: number) => {
@@ -539,13 +633,16 @@ export function Board({ code, username, onLeave }: { code: string; username: str
         className={`point ${checkerColor(0, idx, top)} ${isSelected ? 'selected' : ''} ${isHover ? 'hover' : ''}`}
         onMouseEnter={() => setHover(idx)}
         onMouseLeave={() => setHover(null)}
+        onPointerDown={e => beginCandidate(e, idx)}
         onClick={() => {
+          if (consumeTap()) return
           if (settings.swapClicks) handleRightClick(idx)
           else if (selected !== null && validDests.has(idx)) handleDest(idx)
           else handleSelect(idx)
         }}
         onContextMenu={e => {
           e.preventDefault()
+          if (drag) return
           if (settings.swapClicks) {
             if (selected !== null && validDests.has(idx)) handleDest(idx)
             else handleSelect(idx)
@@ -555,7 +652,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
         <div className={`dot ${showDot ? 'show' : ''}`} />
         <div className="stack" style={isOverflow ? { gap: 0 } : undefined}>
           {Array.from({ length: abs }).map((_, i) => {
-            const isHidden = hideOne && i === abs - 1
+            const isHidden = (hideOne || drag?.from === idx) && i === abs - 1
             const s: React.CSSProperties & { zIndex: number } = { zIndex: i, opacity: isHidden ? 0 : 1 }
             if (isOverflow && i !== 0) {
               if (top) (s as any).marginTop = `${gap}px`
@@ -617,7 +714,9 @@ export function Board({ code, username, onLeave }: { code: string; username: str
               className={`barStack top ${selected === -1 && myIdx === barTopIdx ? 'selected' : ''}`}
               onMouseEnter={() => setHover(-1)}
               onMouseLeave={() => setHover(null)}
+              onPointerDown={e => beginCandidate(e, -1)}
               onClick={() => {
+                if (consumeTap()) return
                 if (settings.swapClicks) handleRightClick(-1)
                 else if (selected === -1) setSelected(null)
                 else if (validDests.has(-2) && selected !== null) handleDest(-2)
@@ -625,6 +724,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
               }}
               onContextMenu={e => {
                 e.preventDefault()
+                if (drag) return
                 if (settings.swapClicks) {
                   if (selected === -1) setSelected(null)
                   else if (validDests.has(-2) && selected !== null) handleDest(-2)
@@ -633,14 +733,14 @@ export function Board({ code, username, onLeave }: { code: string; username: str
               }}
             >
               {Array.from({ length: display.bar[barTopIdx] }).map((_, i) => {
-                const hide = animating && fly?.from === -1 && animMoves?.mover === barTopIdx && i === display.bar[barTopIdx] - 1
+                const hide = (animating && fly?.from === -1 && animMoves?.mover === barTopIdx && i === display.bar[barTopIdx] - 1) || (drag?.from === -1 && myIdx === barTopIdx && i === display.bar[barTopIdx] - 1)
                 return <div key={`w${i}`} className={`checker ${barTopIdx === 0 ? 'white' : 'black'} ${selected === -1 && myIdx === barTopIdx ? 'selected' : ''}`} style={{ opacity: hide ? 0 : 1 }} />
               })}
               {selected === -1 && <div className={`dot ${validDests.has(-2) ? 'show' : ''}`} style={{ position: 'relative', top: 6 }} />}
             </div>
-            <div data-bar={barBottomIdx} className={`barStack bottom ${selected === -1 && myIdx === barBottomIdx ? 'selected' : ''}`} onMouseEnter={() => setHover(-1)} onMouseLeave={() => setHover(null)} onClick={() => { if (settings.swapClicks) handleRightClick(-1); else handleSelect(-1) }} onContextMenu={e => { e.preventDefault(); if (settings.swapClicks) handleSelect(-1); else handleRightClick(-1) }}>
+            <div data-bar={barBottomIdx} className={`barStack bottom ${selected === -1 && myIdx === barBottomIdx ? 'selected' : ''}`} onMouseEnter={() => setHover(-1)} onMouseLeave={() => setHover(null)} onPointerDown={e => beginCandidate(e, -1)} onClick={() => { if (consumeTap()) return; if (settings.swapClicks) handleRightClick(-1); else handleSelect(-1) }} onContextMenu={e => { e.preventDefault(); if (drag) return; if (settings.swapClicks) handleSelect(-1); else handleRightClick(-1) }}>
               {Array.from({ length: display.bar[barBottomIdx] }).map((_, i) => {
-                const hide = animating && fly?.from === -1 && animMoves?.mover === barBottomIdx && i === display.bar[barBottomIdx] - 1
+                const hide = (animating && fly?.from === -1 && animMoves?.mover === barBottomIdx && i === display.bar[barBottomIdx] - 1) || (drag?.from === -1 && myIdx === barBottomIdx && i === display.bar[barBottomIdx] - 1)
                 return <div key={`b${i}`} className={`checker ${barBottomIdx === 0 ? 'white' : 'black'} ${selected === -1 && myIdx === barBottomIdx ? 'selected' : ''}`} style={{ opacity: hide ? 0 : 1 }} />
               })}
             </div>
@@ -652,6 +752,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
             <div className="row bottom">{botRight.map(i => renderPoint(i, false))}</div>
           </div>
           {fly?.visible && <div className={`checker ${fly.color} fly`} style={{ left: fly.x, top: fly.y }} />}
+          {drag && <div className={`checker ${myIdx === 0 ? 'white' : 'black'} drag-ghost`} style={{ position: 'fixed', left: drag.x, top: drag.y, transform: drag.touch ? 'translate(-50%, -135%)' : 'translate(-50%, -50%)', zIndex: 60, pointerEvents: 'none' }} />}
           {!winner && doubleOffer && doubleOffer.by !== myIdx && (
             <div className="doubleOverlay">
               <div className="doubleBox">
@@ -665,7 +766,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
             </div>
           )}
         </div>
-        <div className={`offTray trough ${selected !== null && validDests.has(-2) ? 'canBearOff' : ''}`} onClick={() => { if (selected !== null && validDests.has(-2)) handleDest(-2) }}>
+        <div className={`offTray trough ${selected !== null && validDests.has(-2) ? 'canBearOff' : ''}`} onClick={() => { if (consumeTap()) return; if (selected !== null && validDests.has(-2)) handleDest(-2) }}>
           <div className="troughInner">
             <div className={`offStack ${offTopIdx === 0 ? 'white-trough' : 'black-trough'}`} data-off={offTopIdx}>
               {Array.from({ length: display.off[offTopIdx] }).map((_, i) => (

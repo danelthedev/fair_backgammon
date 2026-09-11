@@ -115,4 +115,7 @@ html{-webkit-text-size-adjust:100%}
 body{min-height:100dvh;padding-bottom:env(safe-area-inset-bottom);-webkit-tap-highlight-color:transparent}
 .input{font-size:16px}
 .board{touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+/* ponytail: drag needs raw touch stream, page scroll starts outside points */
+.point,.barStack{touch-action:none}
+.checker.drag-ghost{width:46px;height:46px;margin:0}
 @media(max-width:480px){.title{font-size:2rem}.lobby{padding:1.2rem 1rem}.boardWrap{padding:.6rem .5rem}.board{border-width:6px;padding:4px;gap:4px;min-height:500px}.barMid{width:48px;padding:8px 2px}.checker{width:30px;height:30px}.die{width:36px;height:36px;padding:4px}.dicePair.double .die{width:32px;height:32px}.point{height:230px}.btn.large{min-height:48px}.playerHeader{flex-wrap:wrap;gap:6px}.topBar{flex-wrap:wrap;gap:8px}}
