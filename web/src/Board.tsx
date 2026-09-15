@@ -102,6 +102,17 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     setHover(null) // ponytail: touch hover lingers, clear with turn
   }, [server?.turn])
 
+  // ponytail: Safari freezes dvh on scroll-locked pages — track live height instead
+  useEffect(() => {
+    const setH = () => document.documentElement.style.setProperty('--apph', `${window.visualViewport?.height ?? window.innerHeight}px`)
+    setH()
+    window.visualViewport?.addEventListener('resize', setH)
+    window.addEventListener('orientationchange', setH)
+    return () => {
+      window.visualViewport?.removeEventListener('resize', setH)
+      window.removeEventListener('orientationchange', setH)
+    }
+  }, [])
   // ponytail: opponent anim only, mover sees instant
   useEffect(() => {
     if (!server) return
