@@ -164,6 +164,10 @@ func main() {
 			http.NotFound(w, r)
 			return
 		}
+		// ponytail: hashed vite assets never change — cache hard; entry html stays no-store below
+		if strings.HasPrefix(r.URL.Path, "/assets/") {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		}
 		// try exact file from embedded (entry point always goes through no-store fallback below)
 		p := strings.TrimPrefix(r.URL.Path, "/")
 		if p != "" && p != "index.html" && sub != nil {
