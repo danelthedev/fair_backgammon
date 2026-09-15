@@ -104,8 +104,16 @@ export function Board({ code, username, onLeave }: { code: string; username: str
 
   // ponytail: Safari freezes dvh on scroll-locked pages — track live height instead
   useEffect(() => {
-    const setH = () => document.documentElement.style.setProperty('--apph', `${window.visualViewport?.height ?? window.innerHeight}px`)
+    let lastH = 0 // ponytail: big jumps = keyboard/toolbar, yank page back to top
+    const setH = () => {
+      const h = window.visualViewport?.height ?? window.innerHeight
+      document.documentElement.style.setProperty('--apph', `${h}px`)
+      if (lastH && Math.abs(h - lastH) > 100) window.scrollTo(0, 0)
+      lastH = h
+    }
     setH()
+    ;(document.activeElement as HTMLElement | null)?.blur?.() // ponytail: drop lobby keyboard, it pans page
+    window.scrollTo(0, 0)
     window.visualViewport?.addEventListener('resize', setH)
     window.addEventListener('orientationchange', setH)
     return () => {
