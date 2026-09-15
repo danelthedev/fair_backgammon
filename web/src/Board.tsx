@@ -99,6 +99,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   const isHit = (to: number) => !!local && to !== -2 && to >= 0 && to < 24 && (myIdx === 0 ? local.board[to] === -1 : local.board[to] === 1)
   useEffect(() => {
     setSelected(null)
+    setHover(null) // ponytail: touch hover lingers, clear with turn
   }, [server?.turn])
 
   // ponytail: opponent anim only, mover sees instant
@@ -480,6 +481,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     if (!myTurn || !server.hasRolled) return
     if (selected === from) {
       setSelected(null)
+      setHover(null) // ponytail: re-tap untoggles dots too
       return
     }
     // must have piece
@@ -580,6 +582,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
           addMove({ from, to, die: d })
           sfx.move(isHit(to))
           setSelected(null)
+          setHover(null) // ponytail: quick-move leaves stale hover dots
           return
         }
       }
@@ -725,7 +728,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
               onClick={() => {
                 if (consumeTap()) return
                 if (settings.swapClicks) handleRightClick(-1)
-                else if (selected === -1) setSelected(null)
+                else if (selected === -1) { setSelected(null); setHover(null) }
                 else if (validDests.has(-2) && selected !== null) handleDest(-2)
                 else handleSelect(-1)
               }}
@@ -733,7 +736,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
                 e.preventDefault()
                 if (drag) return
                 if (settings.swapClicks) {
-                  if (selected === -1) setSelected(null)
+                  if (selected === -1) { setSelected(null); setHover(null) }
                   else if (validDests.has(-2) && selected !== null) handleDest(-2)
                   else handleSelect(-1)
                 } else handleRightClick(-1)
