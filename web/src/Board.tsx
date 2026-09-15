@@ -150,10 +150,11 @@ export function Board({ code, username, onLeave }: { code: string; username: str
           continue
         }
         const br = boardEl.getBoundingClientRect()
-        const narrow = typeof window !== 'undefined' && window.innerWidth <= 900
-        const flyHalf = narrow ? 18 : 25
-        const flyStep = narrow ? 39 : 53
-        const flySize = narrow ? 36 : 50
+        const narrow = typeof window !== 'undefined' && (window.innerWidth <= 900 || window.innerHeight <= 600)
+        // ponytail: measure real checker so fly lands right on mobile sizes
+        const flySize = narrow ? (boardEl.querySelector('.checker')?.getBoundingClientRect().width || 24) : 50
+        const flyHalf = flySize / 2
+        const flyStep = flySize + 3
         const fromChecker = fromEl.querySelector('.checker:last-child') as HTMLElement | null
         const fr = (fromChecker || fromEl).getBoundingClientRect()
         const fx = fr.left - br.left + fr.width / 2 - flyHalf
@@ -511,6 +512,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
         seq.forEach(m => addMove(m))
         sfx.move(seq.some(m => isHit(m.to)))
         setSelected(null)
+        setHover(null) // ponytail: touch keeps stale hover, dots lingered
         return
       }
     }
@@ -520,6 +522,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
         addMove({ from, to, die: d })
         sfx.move(isHit(to))
         setSelected(null)
+        setHover(null) // ponytail: touch keeps stale hover, dots lingered
         return
       }
     }
@@ -620,8 +623,12 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     const isHover = hover === idx
     const hideOne = animating && fly?.from === idx && abs > 0
     // ponytail: overlap only when stack exceeds point height, never past triangle tip
-    const cs = typeof window !== 'undefined' && window.innerWidth <= 900 ? 36 : 50
-    const AVAIL = typeof window !== 'undefined' && window.innerWidth <= 900 ? 213 : 303
+    // ponytail: measure real checker/point so overlap math matches CSS at any size
+    const narrowPt = typeof window !== 'undefined' && (window.innerWidth <= 900 || window.innerHeight <= 600)
+    const ptEl = narrowPt ? boardRef.current?.querySelector('.point') as HTMLElement | null : null
+    const ckEl = narrowPt ? boardRef.current?.querySelector('.checker') as HTMLElement | null : null
+    const cs = narrowPt ? Math.max(18, Math.round(ckEl?.getBoundingClientRect().width || 24)) : 50
+    const AVAIL = narrowPt ? Math.max(80, (ptEl?.clientHeight || 200) - 20) : 303
     const FIT = Math.floor((AVAIL + 3) / (cs + 3))
     const isOverflow = abs > FIT
     const MAX = AVAIL
@@ -804,6 +811,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
       </div>
       {winner && (
         <div className="rematchBox" style={{ textAlign: 'center', margin: '16px 0' }}>
+          <div className="winLabelMobile turn big">{winner} wins{winReason === 'gammon' || winReason === 'backgammon' ? ` by ${winReason}` : ''}! {scores?.[0] ?? 0}-{scores?.[1] ?? 0}</div>
           <button className="btn primary large" onClick={requestRematch} disabled={rematch?.[myIdx]} style={{ marginTop: 10 }}>
             {rematch?.[myIdx] ? 'Waiting for opponent...' : 'Rematch'}
           </button>
