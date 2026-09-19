@@ -296,7 +296,7 @@ func (r *Room) broadcastStateLocked() {
 	msg, _ := json.Marshal(map[string]any{
 		"t": "state", "code": r.Code, "board": r.Game.Board, "bar": r.Game.Bar, "off": r.Game.Off,
 		"turn": r.Game.Turn, "dice": r.Game.Dice, "movesLeft": r.Game.MovesLeft, "hasRolled": r.Game.HasRolled, "players": r.Players, "lastMoves": r.LastMoves,
-		"scores": r.Scores, "rematch": r.Rematch, "cube": r.Cube, "doubleOffer": r.DoubleOffer, "doubledThisTurn": r.DoubledThisTurn, "lastDoubler": r.LastDoubler,
+		"scores": r.Scores, "rematch": r.Rematch, "cube": r.Cube, "doubleOffer": r.DoubleOffer, "doubledThisTurn": r.DoubledThisTurn, "lastDoubler": r.LastDoubler, "legalMoves": r.Game.LegalMoves(),
 	})
 	for ch := range r.subs {
 		select {

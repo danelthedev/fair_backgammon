@@ -154,6 +154,7 @@ func (r *Room) BroadcastState() {
 		"doubleOffer":     r.DoubleOffer,
 		"doubledThisTurn": r.DoubledThisTurn,
 		"lastDoubler":     r.LastDoubler,
+		"legalMoves":      r.Game.LegalMoves(),
 	})
 	for ch := range r.subs {
 		select {

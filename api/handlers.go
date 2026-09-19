@@ -107,6 +107,7 @@ func HandleGetLobby(hub *lobby.Hub) http.HandlerFunc {
 			"off":     room.Game.Off,
 			"turn":    room.Game.Turn,
 			"dice":    room.Game.Dice,
+			"legalMoves": room.Game.LegalMoves(),
 		})
 	}
 }

@@ -341,6 +341,34 @@ func (g *Game) HasAnyLegal() bool {
 	return false
 }
 
+// LegalMoves lists all legal (from,to,die) triples. Additive read-only helper
+// for bots; unused by existing flows. ponytail: same loops as HasAnyLegal.
+func (g *Game) LegalMoves() []Move {
+	out := []Move{}
+	if !g.HasRolled || len(g.MovesLeft) == 0 {
+		return out
+	}
+	seen := map[Move]bool{}
+	for _, d := range g.MovesLeft {
+		for from := BarPos; from < 24; from++ {
+			if from == -1 && g.Bar[g.Turn] == 0 {
+				continue
+			}
+			for to := -2; to < 24; to++ {
+				if to == -1 {
+					continue
+				}
+				m := Move{From: from, To: to, Die: d}
+				if ok, _ := g.IsLegal(m); ok && !seen[m] {
+					seen[m] = true
+					out = append(out, m)
+				}
+			}
+		}
+	}
+	return out
+}
+
 func (g *Game) CheckWin() (bool, Player) {
 	if g.Off[White] >= 15 {
 		return true, White
