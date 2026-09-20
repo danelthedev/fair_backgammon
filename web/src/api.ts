@@ -23,3 +23,15 @@ export async function joinLobby(code: string): Promise<void> {
   const r = await fetch(`/api/lobby/${code}/join`, { method: 'POST', credentials: 'include' })
   if (!r.ok) throw new Error(await r.text())
 }
+
+export async function createVsFly(variant: string): Promise<string> {
+  const r = await fetch('/api/lobby/vs-fly', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ variant }),
+  })
+  if (!r.ok) throw new Error(await r.text())
+  const j = await r.json()
+  return j.code
+}

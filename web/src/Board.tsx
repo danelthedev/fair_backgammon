@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useGame } from './useGame'
 import { useSettings } from './useSettings'
 import { playCapture, playDice, playMove, playTurn } from './sound'
@@ -60,20 +60,21 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   const dragOnRef = useRef(false)
   const candRef = useRef<{ from: number; x0: number; y0: number; id: number } | null>(null)
   const apiRef = useRef<{ canStart: (f: number) => boolean; target: (x: number, y: number) => number | null; drop: (f: number, t: number) => void }>({ canStart: () => false, target: () => null, drop: () => {} })
+  // ponytail: rolling must self-clear even when a fast bot ends the turn
+  // before the 600ms lapses (old code cancelled the timer on turn switch).
   useEffect(() => {
     if (isFirstRollRender.current) {
       isFirstRollRender.current = false
       prevHasRolled.current = !!server?.hasRolled
+      setRolling(false)
       return
     }
-    if (server?.hasRolled && !prevHasRolled.current) {
-      sfx.dice()
-      setRolling(true)
-      const t = setTimeout(() => setRolling(false), 600)
-      prevHasRolled.current = true
-      return () => clearTimeout(t)
-    }
+    if (server?.hasRolled && !prevHasRolled.current) sfx.dice()
     prevHasRolled.current = !!server?.hasRolled
+    if (!server?.hasRolled) { setRolling(false); return }
+    setRolling(true)
+    const t = setTimeout(() => setRolling(false), 600)
+    return () => clearTimeout(t)
   }, [server?.hasRolled])
   // ponytail: auto-roll fires once per turn start, delayed so double stays possible
   useEffect(() => {
@@ -122,7 +123,9 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     }
   }, [])
   // ponytail: opponent anim only, mover sees instant
-  useEffect(() => {
+  // layout effect: set animBoard before paint so the final board never flashes
+  // (instant bot turns used to paint final, then replay from snapshot)
+  useLayoutEffect(() => {
     if (!server) return
     const prev = prevServer.current
     if (!prev) { prevServer.current = server; return }
@@ -621,7 +624,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   const canConfirm = pending.length > 0 && !hasAnyLegal()
   const stake = cube && cube > 1 ? cube : 1
   const bothHere = !!(server.players[0] && server.players[1])
-  const canDouble = !winner && myTurn && !server.hasRolled && !animating && !rolling && bothHere && !doubleOffer && !doubledThisTurn && (lastDoubler ?? -1) !== myIdx && stake < 64
+  const canDouble = !winner && myTurn && !server.hasRolled && !animating && !rolling && bothHere && !doubleOffer && !doubledThisTurn && (lastDoubler ?? -1) !== myIdx && stake < 64 && !server.vsFly
   const showDice = server.dice[0] !== 0
   const isDouble = showDice && server.dice[0] === server.dice[1]
   const diceValues = isDouble ? (Array(4).fill(server.dice[0]) as number[]) : ([...server.dice] as number[])

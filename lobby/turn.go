@@ -210,6 +210,10 @@ func (r *Room) GameTurn(conn interface {
 		}
 		r.broadcastStateLocked()
 	case "double":
+		if r.VsFly {
+			sendErr("doubling disabled vs fly")
+			return
+		}
 		if win, _ := g.CheckWin(); win {
 			sendErr("game over, request rematch")
 			return
@@ -243,6 +247,10 @@ func (r *Room) GameTurn(conn interface {
 		r.LastDoubler = idx
 		r.broadcastStateLocked()
 	case "double_response":
+		if r.VsFly {
+			sendErr("doubling disabled vs fly")
+			return
+		}
 		if r.DoubleOffer == nil {
 			sendErr("no double offer")
 			return
@@ -296,7 +304,7 @@ func (r *Room) broadcastStateLocked() {
 	msg, _ := json.Marshal(map[string]any{
 		"t": "state", "code": r.Code, "board": r.Game.Board, "bar": r.Game.Bar, "off": r.Game.Off,
 		"turn": r.Game.Turn, "dice": r.Game.Dice, "movesLeft": r.Game.MovesLeft, "hasRolled": r.Game.HasRolled, "players": r.Players, "lastMoves": r.LastMoves,
-		"scores": r.Scores, "rematch": r.Rematch, "cube": r.Cube, "doubleOffer": r.DoubleOffer, "doubledThisTurn": r.DoubledThisTurn, "lastDoubler": r.LastDoubler, "legalMoves": r.Game.LegalMoves(),
+		"scores": r.Scores, "rematch": r.Rematch, "cube": r.Cube, "doubleOffer": r.DoubleOffer, "doubledThisTurn": r.DoubledThisTurn, "lastDoubler": r.LastDoubler, "legalMoves": r.Game.LegalMoves(), "vsFly": r.VsFly,
 	})
 	for ch := range r.subs {
 		select {

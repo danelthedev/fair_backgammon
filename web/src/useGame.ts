@@ -17,6 +17,7 @@ export type ServerState = {
   cube?: number
   doubleOffer?: { by: number; stake: number } | null
   doubledThisTurn?: boolean
+  vsFly?: boolean
   lastDoubler?: number
 }
 
@@ -109,6 +110,7 @@ export function useGame(code: string, username: string) {
             doubleOffer: msg.doubleOffer ?? null,
             doubledThisTurn: msg.doubledThisTurn ?? false,
             lastDoubler: msg.lastDoubler ?? -1,
+            vsFly: msg.vsFly ?? false,
           })
           clearTimeout(timeout)
           setConnectionError(null)

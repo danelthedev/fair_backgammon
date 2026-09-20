@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createLobby, joinLobby, setUsername } from './api'
+import { createLobby, createVsFly, joinLobby, setUsername } from './api'
 
 export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => void }) {
   const [user, setUser] = useState(() => localStorage.getItem('user') ?? '')
@@ -7,6 +7,7 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
   const [created, setCreated] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
 
+  const [variant, setVariant] = useState('untrained')
   const ensureUser = async () => {
     if (!user.trim()) throw new Error('enter username')
     await setUsername(user.trim())
@@ -32,6 +33,15 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
     } catch (e: any) { setErr(e.message) }
   }
 
+  const handleVsFly = async () => {
+    try {
+      await ensureUser()
+      const c = await createVsFly(variant)
+      setErr(null)
+      onEnter(c, user.trim())
+    } catch (e: any) { setErr(e.message) }
+  }
+
   return (
     <div className="lobby" style={{ marginTop: '3vh' }}>
       <input className="input user" placeholder="username" value={user} onChange={e => { setUser(e.target.value); localStorage.setItem('user', e.target.value) }} maxLength={20} style={{ position: 'fixed', top: 12, left: 12, width: 200, textAlign: 'left', margin: 0, zIndex: 100 }} />
@@ -54,6 +64,13 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
           <div className="joinRow">
             <input className="input codeInput" placeholder="CODE" value={code} onChange={e => setCode(e.target.value.toUpperCase())} maxLength={4} />
             <button className="btn" onClick={() => handleJoin()}>Join</button>
+          </div>
+          <div className="joinRow">
+            <select className="input codeInput" value={variant} onChange={e => setVariant(e.target.value)} aria-label="fly variant">
+              <option value="untrained">Fly: untrained</option>
+              <option value="trained">Fly: trained</option>
+            </select>
+            <button className="btn primary" onClick={handleVsFly}>Play vs Fly</button>
           </div>
         </div>
       </div>

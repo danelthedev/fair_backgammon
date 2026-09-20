@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"fair_backgammon/game"
+	"math/rand"
 )
 
 type Hub struct {
@@ -24,6 +25,7 @@ type Room struct {
 	DoubleOffer     *DoubleOffer
 	DoubledThisTurn bool
 	LastDoubler     int
+	VsFly           bool // bot game: doubling disabled, bot plays a seat
 
 	mu        sync.Mutex
 	subs      map[chan []byte]struct{}
@@ -48,6 +50,19 @@ func (h *Hub) Create(username string) *Room {
 	r.Cube = 1
 	r.LastDoubler = -1
 	h.games[code] = r
+	return r
+}
+
+// CreateVsFly makes a room with human + bot seated, human color random.
+func (h *Hub) CreateVsFly(human, botname string) *Room {
+	r := h.Create(human)
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	r.Players[1] = botname
+	r.VsFly = true
+	if rand.Intn(2) == 0 {
+		r.Players[0], r.Players[1] = r.Players[1], r.Players[0]
+	}
 	return r
 }
 
@@ -152,6 +167,7 @@ func (r *Room) BroadcastState() {
 		"rematch":         r.Rematch,
 		"cube":            r.Cube,
 		"doubleOffer":     r.DoubleOffer,
+		"vsFly":           r.VsFly,
 		"doubledThisTurn": r.DoubledThisTurn,
 		"lastDoubler":     r.LastDoubler,
 		"legalMoves":      r.Game.LegalMoves(),

@@ -131,3 +131,54 @@ func HandleLeaveLobby(hub *lobby.Hub) http.HandlerFunc {
 		json.NewEncoder(w).Encode(map[string]string{"ok": "left"})
 	}
 }
+
+// FlySpawn launches the bot player for a room. Set by main (env FLY_BOT).
+// Returning error aborts room creation with 500.
+var FlySpawn func(code, botname, variant string) error
+
+// FlyLocal seats an in-process bot. Set by main when fly.json loads.
+// Takes precedence over FlySpawn.
+var FlyLocal func(hub *lobby.Hub, room *lobby.Room, botname, variant string)
+
+func HandleCreateVsFly(hub *lobby.Hub) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			http.Error(w, "method not allowed", 405)
+			return
+		}
+		user := usernameFromCookie(r)
+		if user == "" {
+			http.Error(w, "set username first", 401)
+			return
+		}
+		var body struct {
+			Variant string `json:"variant"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		if body.Variant == "" {
+			body.Variant = "untrained"
+		}
+		botname := "Fly"
+		if body.Variant == "trained" {
+			botname = "Fly+"
+		} else if body.Variant != "untrained" {
+			http.Error(w, "unknown variant", 400)
+			return
+		}
+	if FlyLocal == nil && FlySpawn == nil {
+	    http.Error(w, "fly not configured", 501)
+	    return
+	}
+	room := hub.CreateVsFly(user, botname)
+	if FlyLocal != nil {
+	    go FlyLocal(hub, room, botname, body.Variant)
+	} else if FlySpawn != nil {
+	    if err := FlySpawn(room.Code, botname, body.Variant); err != nil {
+		http.Error(w, "fly unavailable: "+err.Error(), 500)
+		return
+	    }
+	}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"code": room.Code})
+	}
+}
