@@ -61,7 +61,7 @@ func TestPipOpening(t *testing.T) {
 	if Pip(b, [2]int{}, 0) != 167 || Pip(b, [2]int{}, 1) != 167 {
 		t.Fatalf("opening pip %d %d", Pip(b, [2]int{}, 0), Pip(b, [2]int{}, 1))
 	}
-	if len(EncodeState(b, [2]int{}, [2]int{}, 0)) != 38 {
-		t.Fatal("encode dim != 38")
+	if len(EncodeState(b, [2]int{}, [2]int{}, 0)) != 52 {
+		t.Fatal("encode dim != 52")
 	}
 }

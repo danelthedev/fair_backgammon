@@ -158,10 +158,12 @@ func HandleCreateVsFly(hub *lobby.Hub) http.HandlerFunc {
 		if body.Variant == "" {
 			body.Variant = "untrained"
 		}
-		botname := "Fly"
-		if body.Variant == "trained" {
-			botname = "Fly+"
-		} else if body.Variant != "untrained" {
+        botname := "Fly"
+        if body.Variant == "trained" {
+            botname = "Fly+"
+        } else if body.Variant == "expert" {
+            botname = "Fly*"
+        } else if body.Variant != "untrained" {
 			http.Error(w, "unknown variant", 400)
 			return
 		}

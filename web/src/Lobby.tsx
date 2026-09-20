@@ -69,6 +69,7 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
             <select className="input codeInput" value={variant} onChange={e => setVariant(e.target.value)} aria-label="fly variant">
               <option value="untrained">Fly: untrained</option>
               <option value="trained">Fly: trained</option>
+              <option value="expert">Fly: expert</option>
             </select>
             <button className="btn primary" onClick={handleVsFly}>Play vs Fly</button>
           </div>

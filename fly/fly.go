@@ -80,7 +80,68 @@ func Pip(board [24]int, bar [2]int, p int) int {
 	return tot
 }
 
-// EncodeState builds the 38-dim state vector. Port of musca brain/features.py.
+// Shots counts dice (1..6) with which the opponent can hit p's blots.
+// Port of musca brain/features.py.
+func Shots(board [24]int, bar [2]int, p int) int {
+	s, opp := 1, 1
+	if p == 1 {
+		s, opp = -1, 0
+	}
+	total := 0
+	for i, v := range board {
+		if v != s {
+			continue
+		}
+		for d := 1; d <= 6; d++ {
+			if opp == 0 {
+				frm := i + d
+				if frm < 24 && board[frm] > 0 {
+					total++
+				} else if frm >= 24 && bar[opp] > 0 && (24-d) == i {
+					total++
+				}
+			} else {
+				frm := i - d
+				if frm >= 0 && board[frm] < 0 {
+					total++
+				} else if frm < 0 && bar[opp] > 0 && (d-1) == i {
+					total++
+				}
+			}
+		}
+	}
+	return total
+}
+
+// IsRace reports no-contact positions (armies passed each other).
+func IsRace(board [24]int, bar [2]int) float64 {
+	if bar[0] != 0 || bar[1] != 0 {
+		return 0.0
+	}
+	wMax, bMin := -1, 24
+	wAny, bAny := false, false
+	for i, v := range board {
+		if v > 0 {
+			wMax, wAny = i, true
+		}
+		if v < 0 {
+			if !bAny {
+				bMin = i
+			}
+			bAny = true
+		}
+	}
+	if !wAny || !bAny {
+		return 1.0
+	}
+	if wMax < bMin {
+		return 1.0
+	}
+	return 0.0
+}
+
+// EncodeState builds the 52-dim state vector. Idx 0..37 frozen, 38..51 appended.
+// Port of musca brain/features.py.
 func EncodeState(board [24]int, bar, off [2]int, turn int) []float64 {
 	f := make([]float64, 0, 38)
 	for _, v := range board {
@@ -119,6 +180,59 @@ func EncodeState(board [24]int, bar, off [2]int, turn int) []float64 {
 		}
 		f = append(f, float64(blots)/8.0, float64(made)/6.0, float64(home)/15.0)
 	}
+	f = append(f, float64(Shots(board, bar, 0))/6.0, float64(Shots(board, bar, 1))/6.0)
+	mhW, mhB, moW, moB := 0, 0, 0, 0
+	for i := 0; i < 6; i++ {
+		if board[i] >= 2 {
+			mhW++
+		}
+	}
+	for i := 18; i < 24; i++ {
+		if board[i] <= -2 {
+			mhB++
+		}
+	}
+	for i := 6; i < 18; i++ {
+		if board[i] >= 2 {
+			moW++
+		} else if board[i] <= -2 {
+			moB++
+		}
+	}
+	f = append(f, float64(mhW)/3.0, float64(mhB)/3.0, float64(moW)/4.0, float64(moB)/4.0)
+	aw, ab := 0.0, 0.0
+	for i := 18; i < 24; i++ {
+		if board[i] >= 2 {
+			aw = 1.0
+			break
+		}
+	}
+	for i := 0; i < 6; i++ {
+		if board[i] <= -2 {
+			ab = 1.0
+			break
+		}
+	}
+	f = append(f, aw, ab)
+	spW, spB, emW, emB := 0, 0, 0, 0
+	for i := 0; i < 6; i++ {
+		if board[i] > 2 {
+			spW += board[i] - 2
+		}
+		if board[i] == 0 {
+			emW++
+		}
+	}
+	for i := 18; i < 24; i++ {
+		if board[i] < -2 {
+			spB += -board[i] - 2
+		}
+		if board[i] == 0 {
+			emB++
+		}
+	}
+	f = append(f, float64(spW)/6.0, float64(spB)/6.0, float64(emW)/6.0, float64(emB)/6.0)
+	f = append(f, IsRace(board, bar), float64(off[0]-off[1])/15.0)
 	return f
 }
 

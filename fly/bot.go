@@ -159,7 +159,12 @@ func Play(hub *lobby.Hub, code, botname, variant string, h *Head) {
 				time.Sleep(900 * time.Millisecond)
 				justRolled = false
 			}
-			m := Choose(h, w, st.Board, st.Bar, st.Off, st.Turn, st.LegalMoves, rng)
+			var m game.Move
+			if variant == "expert" {
+				m = Expectimax(h, w, st.Board, st.Bar, st.Off, st.Turn, st.LegalMoves, rng)
+			} else {
+				m = Choose(h, w, st.Board, st.Bar, st.Off, st.Turn, st.LegalMoves, rng)
+			}
 			room.GameTurn(dc, nil, "", idx, turnMsg{T: "move", From: &m.From, To: &m.To, Die: &m.Die})
 		}
 	}
