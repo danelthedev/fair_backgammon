@@ -43,6 +43,11 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   const vol = (settings.volume ?? 100) / 100
   const [selected, setSelected] = useState<number | null>(null)
   const [hover, setHover] = useState<number | null>(null)
+  // ponytail: hover dots must survive moves on desktop (right-click quick-move
+  // relies on it); only touch screens (no hover capability) need stale-tap clearing
+  const clearTouchHover = () => {
+    try { if (window.matchMedia('(hover: none)').matches) setHover(null) } catch {}
+  }
   const [rolling, setRolling] = useState(false)
   const [autoRoll, setAutoRoll] = useState(() => { try { return localStorage.getItem('fair_backgammon_autoroll') === '1' } catch { return false } })
   const toggleAutoRoll = () => setAutoRoll(v => { const n = !v; try { localStorage.setItem('fair_backgammon_autoroll', n ? '1' : '0') } catch {} return n })
@@ -536,7 +541,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
         seq.forEach(m => addMove(m))
         sfx.move(seq.some(m => isHit(m.to)))
         setSelected(null)
-        setHover(null) // ponytail: touch keeps stale hover, dots lingered
+        clearTouchHover() // desktop keeps hover dots, touch clears stale tap
         return
       }
     }
@@ -546,7 +551,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
         addMove({ from, to, die: d })
         sfx.move(isHit(to))
         setSelected(null)
-        setHover(null) // ponytail: touch keeps stale hover, dots lingered
+        clearTouchHover() // desktop keeps hover dots, touch clears stale tap
         return
       }
     }
@@ -604,7 +609,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
           addMove({ from, to, die: d })
           sfx.move(isHit(to))
           setSelected(null)
-          setHover(null) // ponytail: quick-move leaves stale hover dots
+          clearTouchHover() // desktop keeps hover dots after quick-move
           return
         }
       }
