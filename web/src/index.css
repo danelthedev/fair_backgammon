@@ -84,6 +84,9 @@ body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--whi
 .boardRow{display:flex;align-items:stretch;gap:12px;width:100%}
 .board{flex:1 1 auto;min-width:0}
 .playerHeader{display:flex;justify-content:space-between;align-items:center;margin:0 0 8px}
+.brainSide{position:absolute;right:100%;top:52px;bottom:38%;width:min(320px,max(0px,(100vw - 1248px)/2));margin-right:12px;display:flex;flex-direction:column;min-width:0;pointer-events:none;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px;box-shadow:0 4px 16px rgba(0,0,0,.45)}
+.brainPanel{width:100%;flex:1 1 auto;min-height:0;border-radius:6px;background:#000}
+@media(max-width:1280px){.brainSide{display:none}}
 .sideBtn{position:relative;flex:0 0 96px;width:96px;height:120px;align-self:center;z-index:15}
 .sideBtn .btn{position:absolute;left:50%;transform:translateX(-50%)}
 .sideBtn .btn:nth-child(1){top:0}

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useGame } from './useGame'
+import { BrainPanel } from './BrainPanel'
 import { useSettings } from './useSettings'
 import { playCapture, playDice, playMove, playTurn } from './sound'
 
@@ -38,7 +39,7 @@ function Dice({ v, rolling, used }: { v: number; rolling: boolean; used?: boolea
 }
 
 export function Board({ code, username, onLeave }: { code: string; username: string; onLeave: () => void }) {
-  const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler } = useGame(code, username)
+  const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler, brain } = useGame(code, username)
   const { settings } = useSettings()
   const vol = (settings.volume ?? 100) / 100
   const [selected, setSelected] = useState<number | null>(null)
@@ -728,6 +729,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
         </div>
       </div>
       <div className="boardRow">
+        {server?.vsFly && (<div className="brainSide"><BrainPanel frame={brain} /></div>)}
         <div className="board" ref={boardRef} onContextMenu={e => e.preventDefault()} style={animating ? { pointerEvents: 'none' } : undefined}>
           <div className="half left">
             <div className="row top">{topLeft.map(i => renderPoint(i, true))}</div>

@@ -27,6 +27,7 @@ export function useGame(code: string, username: string) {
   const [server, setServer] = useState<ServerState | null>(null)
   const [pending, setPending] = useState<Move[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [brain, setBrain] = useState<{ units: [number, number][]; edges: [number, number][] } | null>(null)
   const [winner, setWinner] = useState<string | null>(null)
   const [winReason, setWinReason] = useState<string | null>(null)
   const [connectionError, setConnectionError] = useState<string | null>(null)
@@ -129,6 +130,8 @@ export function useGame(code: string, username: string) {
             }
           }
           setError(null)
+        } else if (msg.t === 'brain') {
+          if (Array.isArray(msg.units)) setBrain({ units: msg.units, edges: Array.isArray(msg.edges) ? msg.edges : [] })
         } else if (msg.t === 'error') {
           setError(msg.msg)
           setTimeout(() => setError(null), 2000)
@@ -202,5 +205,5 @@ export function useGame(code: string, username: string) {
   const doubledThisTurn = server?.doubledThisTurn ?? false
   const lastDoubler = server?.lastDoubler ?? -1
 
-  return { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, myIdx, send, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler }
+  return { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, myIdx, send, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler, brain }
 }

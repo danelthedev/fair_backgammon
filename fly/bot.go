@@ -151,6 +151,7 @@ func Play(hub *lobby.Hub, code, botname, variant string, h *Head) {
 			room.GameTurn(dc, nil, "", idx, turnMsg{T: "pass"})
 			justRolled = false
 		default:
+			firstMove := justRolled
 			if justRolled {
 				// let the dice roll animation (600ms) finish before the first move
 				time.Sleep(900 * time.Millisecond)
@@ -160,6 +161,11 @@ func Play(hub *lobby.Hub, code, botname, variant string, h *Head) {
 			// as offline training scaffolding in musca; never called live.
 			m := Choose(h, w, st.Board, st.Bar, st.Off, st.Turn, st.LegalMoves, rng)
 			LogActivity(h, w, variant, st.Board, st.Bar, st.Off, st.Turn, m)
+			if firstMove {
+				BroadcastActivity(h, w, room, st.Board, st.Bar, st.Off, st.Turn, m)
+				// Think-first: the panel wave (~2s) plays before the move lands.
+				time.Sleep(2000 * time.Millisecond)
+			}
 			room.GameTurn(dc, nil, "", idx, turnMsg{T: "move", From: &m.From, To: &m.To, Die: &m.Die})
 		}
 	}
