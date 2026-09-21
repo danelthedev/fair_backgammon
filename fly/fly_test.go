@@ -33,7 +33,7 @@ func TestChooseMatchesPython(t *testing.T) {
 	if len(vecs) == 0 {
 		t.Fatal("no vectors")
 	}
-	w := h.W["trained"]
+	w := h.W["lobotomized"]
 	rng := rand.New(rand.NewSource(1))
 	bad := 0
 	for i, v := range vecs {

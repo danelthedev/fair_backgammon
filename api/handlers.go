@@ -100,13 +100,13 @@ func HandleGetLobby(hub *lobby.Hub) http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{
-			"code":    room.Code,
-			"players": room.Players,
-			"board":   room.Game.Board,
-			"bar":     room.Game.Bar,
-			"off":     room.Game.Off,
-			"turn":    room.Game.Turn,
-			"dice":    room.Game.Dice,
+			"code":       room.Code,
+			"players":    room.Players,
+			"board":      room.Game.Board,
+			"bar":        room.Game.Bar,
+			"off":        room.Game.Off,
+			"turn":       room.Game.Turn,
+			"dice":       room.Game.Dice,
 			"legalMoves": room.Game.LegalMoves(),
 		})
 	}
@@ -155,31 +155,31 @@ func HandleCreateVsFly(hub *lobby.Hub) http.HandlerFunc {
 			Variant string `json:"variant"`
 		}
 		_ = json.NewDecoder(r.Body).Decode(&body)
-		if body.Variant == "" {
-			body.Variant = "untrained"
+		// Bot registry: variant id -> display name. Add future bots here.
+		botNames := map[string]string{"lobotomized": "Lobotomized fly"}
+		variant := body.Variant
+		if variant == "" {
+			variant = "lobotomized"
 		}
-        botname := "Fly"
-        if body.Variant == "trained" {
-            botname = "Fly+"
-        } else if body.Variant == "expert" {
-            botname = "Fly*"
-        } else if body.Variant != "untrained" {
-			http.Error(w, "unknown variant", 400)
+		botname, ok := botNames[variant]
+		if !ok {
+			http.Error(w, "unknown bot", 400)
 			return
 		}
-	if FlyLocal == nil && FlySpawn == nil {
-	    http.Error(w, "fly not configured", 501)
-	    return
-	}
-	room := hub.CreateVsFly(user, botname)
-	if FlyLocal != nil {
-	    go FlyLocal(hub, room, botname, body.Variant)
-	} else if FlySpawn != nil {
-	    if err := FlySpawn(room.Code, botname, body.Variant); err != nil {
-		http.Error(w, "fly unavailable: "+err.Error(), 500)
-		return
-	    }
-	}
+		resolved := variant
+		if FlyLocal == nil && FlySpawn == nil {
+			http.Error(w, "fly not configured", 501)
+			return
+		}
+		room := hub.CreateVsFly(user, botname)
+		if FlyLocal != nil {
+			go FlyLocal(hub, room, botname, resolved)
+		} else if FlySpawn != nil {
+			if err := FlySpawn(room.Code, botname, resolved); err != nil {
+				http.Error(w, "fly unavailable: "+err.Error(), 500)
+				return
+			}
+		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"code": room.Code})
 	}

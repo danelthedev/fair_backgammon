@@ -40,10 +40,7 @@ type stateMsg struct {
 // Play occupies the bot seat until the human leaves. Color follows Players
 // (rematch swaps); rematch auto-accepted; room released on exit.
 func Play(hub *lobby.Hub, code, botname, variant string, h *Head) {
-	w, ok := h.W[variant]
-	if !ok {
-		w = h.W["untrained"]
-	}
+	w := h.W["lobotomized"]
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	room := hub.Get(code)
 	if room == nil {
@@ -159,12 +156,10 @@ func Play(hub *lobby.Hub, code, botname, variant string, h *Head) {
 				time.Sleep(900 * time.Millisecond)
 				justRolled = false
 			}
-			var m game.Move
-			if variant == "expert" {
-				m = Expectimax(h, w, st.Board, st.Bar, st.Off, st.Turn, st.LegalMoves, rng)
-			} else {
-				m = Choose(h, w, st.Board, st.Bar, st.Off, st.Turn, st.LegalMoves, rng)
-			}
+			// Pure fly: every variant decides 1-ply. Lookahead search lives only
+			// as offline training scaffolding in musca; never called live.
+			m := Choose(h, w, st.Board, st.Bar, st.Off, st.Turn, st.LegalMoves, rng)
+			LogActivity(h, w, variant, st.Board, st.Bar, st.Off, st.Turn, m)
 			room.GameTurn(dc, nil, "", idx, turnMsg{T: "move", From: &m.From, To: &m.To, Die: &m.Die})
 		}
 	}

@@ -1,12 +1,8 @@
---- PASS: TestChooseMatchesPython (0.18s)
+=== RUN   TestLogActivityWritesReservoir
+--- PASS: TestLogActivityWritesReservoir (0.01s)
+=== RUN   TestChooseMatchesPython
+--- PASS: TestChooseMatchesPython (0.16s)
+=== RUN   TestPipOpening
 --- PASS: TestPipOpening (0.00s)
---- PASS: TestExpectimaxMatchesPython (4.04s)
---- PASS: TestExpectimaxLegal (25.67s)
 PASS
-ok  	fair_backgammon/fly	(cached)
-=== full suite:
---- FAIL: TestDoubleAcceptScoresStake (0.00s)
-    doubling_test.go:47: scores [4 0], want [2 0]
-FAIL
-FAIL	fair_backgammon/tests	0.005s
-FAIL
+ok  	fair_backgammon/fly	0.178s

@@ -3,7 +3,6 @@ package main
 import (
 	"embed"
 	"encoding/json"
-	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
@@ -226,12 +225,9 @@ func main() {
         api.FlySpawn = func(code, botname, variant string) error {
             parts := strings.Fields(flyBot)
             args := append(append([]string{}, parts[1:]...), "--join", code, "--name", botname, "--url", flyURL)
-            if variant == "trained" {
-                if flyWeights == "" {
-                    return fmt.Errorf("trained weights not configured (set FLY_W_TRAINED)")
-                }
-                args = append(args, "--w", flyWeights)
-            }
+if flyWeights != "" {
+args = append(args, "--w", flyWeights)
+}
             cmd := exec.Command(parts[0], args...)
             if f, err := os.OpenFile("/tmp/musca-fly.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); err == nil {
                 cmd.Stdout, cmd.Stderr = f, f

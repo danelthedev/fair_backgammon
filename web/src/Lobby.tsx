@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { createLobby, createVsFly, joinLobby, setUsername } from './api'
 
+// Bot registry: add future bots here; the dropdown renders from this list.
+const BOTS = [{ id: 'lobotomized', label: 'Lobotomized fly' }]
+
 export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => void }) {
   const [user, setUser] = useState(() => localStorage.getItem('user') ?? '')
   const [code, setCode] = useState('')
   const [created, setCreated] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
+  const [variant, setVariant] = useState('lobotomized')
 
-  const [variant, setVariant] = useState('untrained')
   const ensureUser = async () => {
     if (!user.trim()) throw new Error('enter username')
     await setUsername(user.trim())
@@ -66,12 +69,10 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
             <button className="btn" onClick={() => handleJoin()}>Join</button>
           </div>
           <div className="joinRow">
-            <select className="input codeInput" value={variant} onChange={e => setVariant(e.target.value)} aria-label="fly variant">
-              <option value="untrained">Fly: untrained</option>
-              <option value="trained">Fly: trained</option>
-              <option value="expert">Fly: expert</option>
+            <select className="input codeInput" value={variant} onChange={e => setVariant(e.target.value)} aria-label="bot">
+              {BOTS.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
             </select>
-            <button className="btn primary" onClick={handleVsFly}>Play vs Fly</button>
+            <button className="btn primary" onClick={handleVsFly}>Play vs Bot</button>
           </div>
         </div>
       </div>

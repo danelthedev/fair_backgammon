@@ -15,7 +15,7 @@ describe('Lobby vs fly', () => {
     }))
   })
 
-  it('creates vs-fly room with chosen variant', async () => {
+  it('creates vs-bot room with chosen bot', async () => {
     const seen: string[] = []
     ;(fetch as any).mockImplementation(async (url: any, opts: any) => {
       if (String(url).includes('/api/session')) return { ok: true, text: async () => '' }
@@ -25,9 +25,8 @@ describe('Lobby vs fly', () => {
     const onEnter = vi.fn()
     render(<Lobby onEnter={onEnter} />)
     fireEvent.change(screen.getByPlaceholderText('username'), { target: { value: 'alice' } })
-    fireEvent.change(screen.getByLabelText('fly variant'), { target: { value: 'trained' } })
-    fireEvent.click(screen.getByText('Play vs Fly'))
+    fireEvent.click(screen.getByText('Play vs Bot'))
     await waitFor(() => expect(onEnter).toHaveBeenCalledWith('AB12', 'alice'))
-    expect(seen).toEqual(['trained'])
+    expect(seen).toEqual(['lobotomized'])
   })
 })
