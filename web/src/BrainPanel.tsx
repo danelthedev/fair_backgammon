@@ -4,21 +4,27 @@
 // Desktop only via .brainSide CSS (hidden <=1024px).
 import { useEffect, useRef } from 'react'
 
-export type BrainFrame = { units: [number, number][]; edges: [number, number][] } | null
+export type BrainFrame = { variant?: string; units: [number, number][]; edges: [number, number][] } | null
 
-let coordsP: Promise<([number, number] | null)[]> | null = null
+let coords512P: Promise<([number, number] | null)[]> | null = null
+let coords10kP: Promise<([number, number] | null)[]> | null = null
 let bgP: Promise<HTMLImageElement> | null = null
 
+function loadCoords(name: string): Promise<([number, number] | null)[]> {
+  return fetch(name).then(r => r.json()).then(d => d.coords as ([number, number] | null)[])
+}
+
 function assets() {
-  if (!coordsP) {
-    coordsP = fetch('brain_coords.json').then(r => r.json()).then(d => d.coords as ([number, number] | null)[])
+  coords512P ??= loadCoords('brain_coords.json')
+  coords10kP ??= loadCoords('brain_coords_10k.json')
+  if (!bgP) {
     bgP = new Promise(res => {
       const img = new Image()
       img.onload = () => res(img)
       img.src = 'brain_bg.png'
     })
   }
-  return Promise.all([coordsP, bgP!])
+  return Promise.all([coords512P, coords10kP, bgP!])
 }
 
 const RED_LIFE: [number, number, number] = [255, 70, 25]
@@ -80,12 +86,23 @@ function buildWave(f: NonNullable<BrainFrame>): Omit<Exclude<Wave, null>, 't0'> 
 
 export function BrainPanel({ frame }: { frame: BrainFrame }) {
   const ref = useRef<HTMLCanvasElement>(null)
+  const maps = useRef<{ c512: ([number, number] | null)[]; c10k: ([number, number] | null)[] } | null>(null)
+  const coords = useRef<([number, number] | null)[] | null>(null)
   const wave = useRef<Wave>(null)
+  // pick the map that covers the brain currently playing: lobotomized = 512,
+  // retarded = 10k. Falls back to id-range when the frame lacks the variant.
+  const pickMap = (f: BrainFrame, c512: ([number, number] | null)[], c10k: ([number, number] | null)[]) => {
+    let use10k = f!.variant === 'retarded'
+    if (!f!.variant) use10k = (f!.units.some(u => u[0] >= c512.length))
+    coords.current = use10k ? c10k : c512
+  }
 
   useEffect(() => {
     let live = true
     let raf = 0
-    assets().then(([coords, bg]) => {
+    assets().then(([c512, c10k, bg]) => {
+      maps.current = { c512, c10k }
+      if (!coords.current) coords.current = c512 // default until first frame
       if (!live) return
       const draw = () => {
         const cv = ref.current
@@ -109,7 +126,7 @@ export function BrainPanel({ frame }: { frame: BrainFrame }) {
             ctx.drawImage(bg, dx, dy, dw, dh)
             ctx.globalAlpha = 1
             const wv = wave.current
-            if (wv && coords) {
+            if (wv && coords.current) {
               const px = (nx: number) => dx + nx * dw
               const py = (ny: number) => dy + (1 - ny) * dh
               ctx.strokeStyle = '#ff2a1a'
@@ -118,8 +135,8 @@ export function BrainPanel({ frame }: { frame: BrainFrame }) {
                 const dt = performance.now() - wv.t0 - tEdge
                 if (dt < 0) continue
                 const [a, b] = key.split('-').map(Number)
-                const pa = coords[a]
-                const pb = coords[b]
+                const pa = coords.current![a]
+                const pb = coords.current![b]
                 if (!pa || !pb) continue
                 const ta = wv.at.get(a) ?? tEdge
                 const tb = wv.at.get(b) ?? tEdge
@@ -146,7 +163,7 @@ export function BrainPanel({ frame }: { frame: BrainFrame }) {
               for (const u of wv.order) {
                 const dt = performance.now() - wv.t0 - (wv.at.get(u) ?? 0)
                 if (dt < 0) continue
-                const p = coords[u]
+                const p = coords.current![u]
                 if (!p) continue
                 const v = vmap.get(u) ?? 0
                 const vn = wv.vmax > 0 ? v / wv.vmax : 0
@@ -179,12 +196,12 @@ export function BrainPanel({ frame }: { frame: BrainFrame }) {
   }, [])
 
   useEffect(() => {
-    if (frame) {
-      const wv = buildWave(frame) as Wave
-      if (wv) {
-        wv.t0 = performance.now()
-        wave.current = wv
-      }
+    if (!frame) return
+    if (maps.current) pickMap(frame, maps.current.c512, maps.current.c10k)
+    const wv = buildWave(frame) as Wave
+    if (wv) {
+      wv.t0 = performance.now()
+      wave.current = wv
     }
   }, [frame])
 

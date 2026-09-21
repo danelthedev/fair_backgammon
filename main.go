@@ -211,7 +211,7 @@ func main() {
     if heads, err := fly.Load(); err != nil {
         log.Printf("fly data unavailable (%v), subprocess fallback", err)
     } else {
-        log.Printf("fly in-process ready (n=%d, variants=%v)", heads.N, fly.Variants(heads))
+        log.Printf("fly in-process ready (variants=%v)", fly.Variants(heads))
         api.FlyLocal = func(hub *lobby.Hub, room *lobby.Room, botname, variant string) {
             fly.Play(hub, room.Code, botname, variant, heads)
         }

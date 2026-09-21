@@ -39,8 +39,24 @@ type stateMsg struct {
 
 // Play occupies the bot seat until the human leaves. Color follows Players
 // (rematch swaps); rematch auto-accepted; room released on exit.
-func Play(hub *lobby.Hub, code, botname, variant string, h *Head) {
-	w := h.W["lobotomized"]
+func Play(hub *lobby.Hub, code, botname, variant string, heads map[string]*Head) {
+	h := heads[variant]
+	if h == nil {
+		h = heads["retarded"] // default arena head
+		if h == nil {
+			for _, hh := range heads {
+				h = hh
+				break
+			}
+		}
+	}
+	w := h.W[variant]
+	if w == nil { // never expected: each variant head carries its own key
+		for _, ww := range h.W {
+			w = ww
+			break
+		}
+	}
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	room := hub.Get(code)
 	if room == nil {
@@ -162,7 +178,7 @@ func Play(hub *lobby.Hub, code, botname, variant string, h *Head) {
 			m := Choose(h, w, st.Board, st.Bar, st.Off, st.Turn, st.LegalMoves, rng)
 			LogActivity(h, w, variant, st.Board, st.Bar, st.Off, st.Turn, m)
 			if firstMove {
-				BroadcastActivity(h, w, room, st.Board, st.Bar, st.Off, st.Turn, m)
+				BroadcastActivity(h, w, variant, room, st.Board, st.Bar, st.Off, st.Turn, m)
 				// Think-first: the panel wave (~2s) plays before the move lands.
 				time.Sleep(2000 * time.Millisecond)
 			}

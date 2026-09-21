@@ -156,10 +156,10 @@ func HandleCreateVsFly(hub *lobby.Hub) http.HandlerFunc {
 		}
 		_ = json.NewDecoder(r.Body).Decode(&body)
 		// Bot registry: variant id -> display name. Add future bots here.
-		botNames := map[string]string{"lobotomized": "Lobotomized fly"}
+		botNames := map[string]string{"retarded": "Retarded fly", "lobotomized": "Lobotomized fly"}
 		variant := body.Variant
 		if variant == "" {
-			variant = "lobotomized"
+			variant = "retarded"
 		}
 		botname, ok := botNames[variant]
 		if !ok {

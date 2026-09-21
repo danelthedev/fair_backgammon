@@ -53,7 +53,7 @@ func LogActivity(h *Head, w []float64, variant string, board [24]int, bar, off [
 // BroadcastActivity pushes the live brain frame to room subscribers.
 // Observer only: same phi as the decision; top-40 firing units + top-150
 // pathway edges. Powers the arena brain panel.
-func BroadcastActivity(h *Head, w []float64, room *lobby.Room, board [24]int, bar, off [2]int, turn int, m game.Move) {
+func BroadcastActivity(h *Head, w []float64, variant string, room *lobby.Room, board [24]int, bar, off [2]int, turn int, m game.Move) {
 	g := &game.Game{Board: board, Bar: bar, Off: off,
 		Turn: game.Player(turn), MovesLeft: []int{m.Die}, HasRolled: true}
 	if err := g.Apply(m); err != nil {
@@ -185,7 +185,7 @@ func BroadcastActivity(h *Head, w []float64, room *lobby.Room, board [24]int, ba
 		pairs[k] = [2]int{e.i, e.j}
 	}
 	buf, err := json.Marshal(map[string]any{
-		"t": "brain", "units": units, "edges": pairs,
+		"t": "brain", "variant": variant, "units": units, "edges": pairs,
 	})
 	if err != nil {
 		return

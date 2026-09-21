@@ -2,14 +2,17 @@ import { useState } from 'react'
 import { createLobby, createVsFly, joinLobby, setUsername } from './api'
 
 // Bot registry: add future bots here; the dropdown renders from this list.
-const BOTS = [{ id: 'lobotomized', label: 'Lobotomized fly' }]
+const BOTS = [
+  { id: 'retarded', label: 'Retarded fly' },
+  { id: 'lobotomized', label: 'Lobotomized fly' },
+]
 
 export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => void }) {
   const [user, setUser] = useState(() => localStorage.getItem('user') ?? '')
   const [code, setCode] = useState('')
   const [created, setCreated] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
-  const [variant, setVariant] = useState('lobotomized')
+  const [variant, setVariant] = useState('retarded')
 
   const ensureUser = async () => {
     if (!user.trim()) throw new Error('enter username')

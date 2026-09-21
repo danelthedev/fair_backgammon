@@ -15,9 +15,13 @@ import (
 var rawVectors []byte
 
 func TestChooseMatchesPython(t *testing.T) {
-	h, err := Load()
+	heads, err := Load()
 	if err != nil {
 		t.Fatalf("load: %v", err)
+	}
+	h := heads["retarded"]
+	if h == nil {
+		t.Fatal("no retarded variant")
 	}
 	var vecs []struct {
 		Board [24]int  `json:"board"`
@@ -33,7 +37,7 @@ func TestChooseMatchesPython(t *testing.T) {
 	if len(vecs) == 0 {
 		t.Fatal("no vectors")
 	}
-	w := h.W["lobotomized"]
+	w := h.W["retarded"]
 	rng := rand.New(rand.NewSource(1))
 	bad := 0
 	for i, v := range vecs {

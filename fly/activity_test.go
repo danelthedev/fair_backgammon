@@ -12,11 +12,15 @@ import (
 )
 
 func TestLogActivityWritesReservoir(t *testing.T) {
-	h, err := Load()
+	heads, err := Load()
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
-	w := h.W["lobotomized"]
+	h := heads["retarded"]
+	if h == nil {
+		t.Fatal("no retarded variant")
+	}
+	w := h.W["retarded"]
 	var vecs []struct {
 		Board [24]int  `json:"board"`
 		Bar   [2]int   `json:"bar"`

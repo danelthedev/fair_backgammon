@@ -27,6 +27,6 @@ describe('Lobby vs fly', () => {
     fireEvent.change(screen.getByPlaceholderText('username'), { target: { value: 'alice' } })
     fireEvent.click(screen.getByText('Play vs Bot'))
     await waitFor(() => expect(onEnter).toHaveBeenCalledWith('AB12', 'alice'))
-    expect(seen).toEqual(['lobotomized'])
+    expect(seen).toEqual(['retarded'])
   })
 })

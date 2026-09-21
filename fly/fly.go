@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"sort"
 
 	"fair_backgammon/game"
 )
@@ -25,40 +26,60 @@ type Head struct {
 	W               map[string][]float64
 }
 
-// Load parses the embedded export. Fails on any shape mismatch.
-func Load() (*Head, error) {
+// Load parses the embedded export. Each variant owns its full reservoir
+// (n may differ per variant). Fails on any shape mismatch.
+func Load() (map[string]*Head, error) {
 	var d struct {
-		N       int                  `json:"n"`
-		Dim     int                  `json:"dim"`
-		Steps   int                  `json:"steps"`
-		Indptr  []int                `json:"indptr"`
-		Indices []int                `json:"indices"`
-		Data    []float64            `json:"data"`
-		Win     [][]float64          `json:"win"`
-		Weights map[string][]float64 `json:"weights"`
+		Variants map[string]struct {
+			N       int                  `json:"n"`
+			Dim     int                  `json:"dim"`
+			Steps   int                  `json:"steps"`
+			Indptr  []int                `json:"indptr"`
+			Indices []int                `json:"indices"`
+			Data    []float64            `json:"data"`
+			Win     [][]float64          `json:"win"`
+			Weights map[string][]float64 `json:"weights"`
+		} `json:"variants"`
 	}
 	if err := json.Unmarshal(rawJSON, &d); err != nil {
 		return nil, err
 	}
-	h := &Head{N: d.N, Dim: d.Dim, Steps: d.Steps, Indptr: d.Indptr,
-		Indices: d.Indices, Data: d.Data, Win: d.Win, W: d.Weights}
-	if len(h.Indptr) != h.N+1 || h.Indptr[h.N] != len(h.Data) || len(h.Indices) != len(h.Data) {
-		return nil, fmt.Errorf("fly: bad CSR n=%d nnz=%d", h.N, len(h.Data))
-	}
-	if len(h.Win) != h.N {
-		return nil, fmt.Errorf("fly: bad Win rows %d", len(h.Win))
-	}
-	for _, row := range h.Win {
-		if len(row) != h.Dim {
-			return nil, fmt.Errorf("fly: bad Win dim %d", len(row))
+	heads := make(map[string]*Head, len(d.Variants))
+	for vname, dv := range d.Variants {
+		h := &Head{N: dv.N, Dim: dv.Dim, Steps: dv.Steps, Indptr: dv.Indptr,
+			Indices: dv.Indices, Data: dv.Data, Win: dv.Win, W: dv.Weights}
+		if len(h.Indptr) != h.N+1 || h.Indptr[h.N] != len(h.Data) || len(h.Indices) != len(h.Data) {
+			return nil, fmt.Errorf("fly: %s bad CSR n=%d nnz=%d", vname, h.N, len(h.Data))
 		}
-	}
-	for name, w := range h.W {
-		if len(w) != h.N+h.Dim+1 {
-			return nil, fmt.Errorf("fly: bad weights %s len %d", name, len(w))
+		if len(h.Win) != h.N {
+			return nil, fmt.Errorf("fly: %s bad Win rows %d", vname, len(h.Win))
 		}
+		for _, row := range h.Win {
+			if len(row) != h.Dim {
+				return nil, fmt.Errorf("fly: %s bad Win dim %d", vname, len(row))
+			}
+		}
+		for name, w := range h.W {
+			if len(w) != h.N+h.Dim+1 {
+				return nil, fmt.Errorf("fly: %s bad weights %s len %d", vname, name, len(w))
+			}
+		}
+		heads[vname] = h
 	}
-	return h, nil
+	if len(heads) == 0 {
+		return nil, fmt.Errorf("fly: no variants")
+	}
+	return heads, nil
+}
+
+// Variants lists variant names in stable order.
+func Variants(heads map[string]*Head) []string {
+	names := make([]string, 0, len(heads))
+	for n := range heads {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	return names
 }
 
 // Pip counts race pips. Port of musca brain/features.py.
@@ -303,8 +324,8 @@ func Choose(h *Head, w []float64, board [24]int, bar, off [2]int, turn int, move
 	return best[rng.Intn(len(best))]
 }
 
-// Variants lists available weight names.
-func Variants(h *Head) []string {
+// WeightNames lists available weight keys on one head.
+func WeightNames(h *Head) []string {
 	out := make([]string, 0, len(h.W))
 	for name := range h.W {
 		out = append(out, name)
