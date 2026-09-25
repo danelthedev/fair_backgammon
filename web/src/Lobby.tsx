@@ -3,8 +3,7 @@ import { createLobby, createVsFly, joinLobby, setUsername } from './api'
 
 // Bot registry: add future bots here; the dropdown renders from this list.
 const BOTS = [
-  { id: 'retarded', label: 'Retarded fly' },
-  { id: 'lobotomized', label: 'Lobotomized fly' },
+  { id: 'retarded', label: 'Fruit Fly Brain' },
 ]
 
 export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => void }) {
