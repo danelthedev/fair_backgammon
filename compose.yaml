@@ -1,5 +1,6 @@
 services:
   app:
+    image: ghcr.io/danelthedev/fair_backgammon:latest
     build: .
     ports:
       - "8080:8080"
