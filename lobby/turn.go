@@ -330,13 +330,12 @@ func (r *Room) handleGifLocked(idx int, raw *string, sendErr func(string)) {
 		return
 	}
 	r.gifLast[idx] = now
-	b, _ := json.Marshal(map[string]any{"t": "gif", "from": idx, "url": u})
-	for ch := range r.subs {
-		select {
-		case ch <- b:
-		default:
-		}
-	}
+	// ponytail: duration fetched async (network) so the room lock isn't held
+	go func() {
+		dur := gifDuration(u)
+		b, _ := json.Marshal(map[string]any{"t": "gif", "from": idx, "url": u, "dur": dur})
+		r.BroadcastRaw(b)
+	}()
 }
 
 func (r *Room) broadcastStateLocked() {

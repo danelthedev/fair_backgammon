@@ -39,30 +39,8 @@ export function useGame(code: string, username: string) {
     if (old) clearTimeout(old)
     gifTimers.current.set(id, setTimeout(() => { gifTimers.current.delete(id); dropGif(id) }, ms))
   }
-  // ponytail: measure the real gif length client-side; longer than 5s plays until it ends
-  const measureGifLen = (url: string): Promise<number> => new Promise(resolve => {
-    try {
-      const w = window as any
-      if (!w.ImageDecoder) return resolve(0)
-      ;(async () => {
-        try {
-          const blob = await (await fetch(url)).blob()
-          const dec = new w.ImageDecoder({ data: blob, type: blob.type || 'image/gif' })
-          await dec.tracks.ready
-          const t = dec.tracks.selectedTrack
-          if (!t || !Number.isFinite(t.frameCount)) { dec.close(); return resolve(0) }
-          let us = 0
-          for (let i = 0; i < t.frameCount; i++) {
-            const f = await dec.decode({ frameIndex: i })
-            us += f.duration || 0
-            f.close()
-          }
-          dec.close()
-          resolve(us / 1000)
-        } catch { resolve(0) }
-      })()
-    } catch { resolve(0) }
-  })
+  // ponytail: gif runtime (ms) is computed server-side and shipped in the ws message
+  // (dur) — 0/unknown falls back to 5s
   const [connectionError, setConnectionError] = useState<string | null>(null)
   useEffect(() => { serverRef.current = server }, [server])
   const prevPlayersRef = useRef<string[] | null>(null)
@@ -170,8 +148,7 @@ export function useGame(code: string, username: string) {
             const g = { url: msg.url, from: msg.from, id: ++gifSeq.current }
             // ponytail: one live gif per sender — a new send replaces their own, the opponent's keeps playing
             setGifs(prev => [...prev.filter(x => x.from !== g.from), g])
-            armGif(g.id, 5000)
-            measureGifLen(g.url).then(ms => { if (ms > 5000) armGif(g.id, ms) })
+            armGif(g.id, Math.max(5000, Number(msg.dur) || 0))
           }
         } else if (msg.t === 'error') {
           setError(msg.msg)
