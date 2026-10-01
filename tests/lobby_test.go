@@ -71,6 +71,7 @@ func TestTurnRollAndMove(t *testing.T) {
 		To     *int    `json:"to"`
 		Die    *int    `json:"die"`
 		Action *string `json:"action"`
+		Url    *string `json:"url"`
 	}{T: "roll"}
 	r.GameTurn(bob, nil, "", 1, bobMsg)
 	if bob.lastErr() != "not your turn" {
@@ -88,6 +89,7 @@ func TestTurnRollAndMove(t *testing.T) {
 		To     *int    `json:"to"`
 		Die    *int    `json:"die"`
 		Action *string `json:"action"`
+		Url    *string `json:"url"`
 	}{T: "move", From: &from, To: &to, Die: &die}
 	mc2 := &mockConn{}
 	r.GameTurn(mc2, nil, "", 0, bad)
@@ -118,6 +120,7 @@ func TestTurnRollAndMove(t *testing.T) {
 		To     *int    `json:"to"`
 		Die    *int    `json:"die"`
 		Action *string `json:"action"`
+		Url    *string `json:"url"`
 	}{T: "move", From: &found.From, To: &found.To, Die: &found.Die})
 	if mc3.lastErr() != "" {
 		t.Fatalf("legal move got err %s", mc3.lastErr())
@@ -145,6 +148,7 @@ func TestWinBroadcast(t *testing.T) {
 		To     *int    `json:"to"`
 		Die    *int    `json:"die"`
 		Action *string `json:"action"`
+		Url    *string `json:"url"`
 	}{T: "move", From: &from, To: &to, Die: &die})
 	foundWin := false
 	for len(ch) > 0 {

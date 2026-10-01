@@ -23,6 +23,7 @@ type turnMsg struct {
 	To     *int    `json:"to"`
 	Die    *int    `json:"die"`
 	Action *string `json:"action"`
+	Url    *string `json:"url"`
 }
 
 type stateMsg struct {

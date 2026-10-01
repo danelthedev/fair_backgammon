@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useGame } from './useGame'
 import { BrainPanel } from './BrainPanel'
+import { GifPicker } from './GifPicker'
 import { useSettings } from './useSettings'
 import { playCapture, playDice, playMove, playTurn } from './sound'
 
@@ -38,12 +39,24 @@ function Dice({ v, rolling, used }: { v: number; rolling: boolean; used?: boolea
   )
 }
 
+function GifCard({ url, cls }: { url: string; cls: string }) {
+  const [err, setErr] = useState(false)
+  if (err) return null
+  return (
+    <div className={`gifCard ${cls}`}>
+      <img src={url} alt="gif reaction" loading="lazy" onError={() => setErr(true)} />
+    </div>
+  )
+}
+
 export function Board({ code, username, onLeave }: { code: string; username: string; onLeave: () => void }) {
-  const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler, brain } = useGame(code, username)
+  const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler, brain, gif, sendGif } = useGame(code, username)
   const { settings } = useSettings()
   const vol = (settings.volume ?? 100) / 100
   const [selected, setSelected] = useState<number | null>(null)
   const [hover, setHover] = useState<number | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [gifCool, setGifCool] = useState(0) // unix ms, disables Send GIF for 3s
   // ponytail: hover dots must survive moves on desktop (right-click quick-move
   // relies on it); only touch screens (no hover capability) need stale-tap clearing
   const clearTouchHover = () => {
@@ -95,6 +108,11 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     prevTurn.current = server?.turn
   }, [server?.turn])
 
+  // ponytail: hide Send GIF when Klipy isn't configured on the server
+  const [gifOk, setGifOk] = useState(true)
+  useEffect(() => {
+    fetch('/api/gifs/trending?limit=1').then(r => setGifOk(r.ok)).catch(() => setGifOk(false))
+  }, [])
   const myIdx = server ? server.players.indexOf(username) : -1
 
   // ponytail: capture knock instead of slide when a blot gets hit
@@ -719,13 +737,38 @@ export function Board({ code, username, onLeave }: { code: string; username: str
 
       {error && <div className="error">{error}</div>}
       <div className="playerHeader">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="phRow">
           <span className={`playerPill ${!myTurn ? 'active' : ''}`}>{opponentName} · {scores?.[opponentIdx] ?? 0}</span>
           <span className="pipCount">{oppPips}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="phRow">
           <span className="pipCount">{myPips}</span>
           <span className={`playerPill you ${myTurn ? 'active' : ''}`}>{myName} · {scores?.[myIdx] ?? 0}</span>
+          {!winner && bothHere && gifOk && (
+            <button
+              className="btn small ghost gifBtn"
+              onClick={() => setPickerOpen(o => !o)}
+              disabled={Date.now() - gifCool < 3000}
+              title="Send a reaction GIF"
+            >
+              Send GIF
+            </button>
+          )}
+          {pickerOpen && (
+            <>
+              <div className="pickerBackdrop" onClick={() => setPickerOpen(false)} />
+              <div className="gifPickerWrap">
+                <GifPicker
+                  onClose={() => setPickerOpen(false)}
+                  onPick={(u) => {
+                    sendGif(u)
+                    setGifCool(Date.now())
+                    setPickerOpen(false)
+                  }}
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
       <div className="boardRow">
@@ -804,6 +847,8 @@ export function Board({ code, username, onLeave }: { code: string; username: str
               </div>
             </div>
           )}
+          {gif && gif.from === opponentIdx && <GifCard key={gif.key} url={gif.url} cls="recv" />}
+          {gif && gif.from === myIdx && <GifCard key={gif.key} url={gif.url} cls="sent" />}
         </div>
         <div className={`offTray trough ${selected !== null && validDests.has(-2) ? 'canBearOff' : ''}`} onClick={() => { if (consumeTap()) return; if (selected !== null && validDests.has(-2)) handleDest(-2) }}>
           <div className="troughInner">

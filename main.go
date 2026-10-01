@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"fair_backgammon/api"
-	"fair_backgammon/lobby"
 	"fair_backgammon/fly"
+	"fair_backgammon/lobby"
 
 	"github.com/gorilla/websocket"
 )
@@ -101,6 +101,7 @@ func wsHandler(hub *lobby.Hub) http.HandlerFunc {
 				To     *int    `json:"to"`
 				Die    *int    `json:"die"`
 				Action *string `json:"action"`
+				Url    *string `json:"url"`
 			}
 			if err := json.Unmarshal(data, &msg); err != nil {
 				b, _ := json.Marshal(map[string]string{"t": "error", "msg": "bad json"})
@@ -136,6 +137,8 @@ func main() {
 	hub := lobby.NewHub()
 
 	http.HandleFunc("/api/session", api.HandleSession)
+	http.HandleFunc("/api/gifs/search", api.HandleGifSearch)
+	http.HandleFunc("/api/gifs/trending", api.HandleGifTrending)
 	http.HandleFunc("/api/lobby", api.HandleCreateLobby(hub))
 	http.HandleFunc("/api/lobby/vs-fly", api.HandleCreateVsFly(hub))
 	http.HandleFunc("/api/lobby/", func(w http.ResponseWriter, r *http.Request) {
@@ -207,35 +210,35 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-    // Play-vs-Fly: in-process bot when fly.json loads, else python subprocess.
-    if heads, err := fly.Load(); err != nil {
-        log.Printf("fly data unavailable (%v), subprocess fallback", err)
-    } else {
-        log.Printf("fly in-process ready (variants=%v)", fly.Variants(heads))
-        api.FlyLocal = func(hub *lobby.Hub, room *lobby.Room, botname, variant string) {
-            fly.Play(hub, room.Code, botname, variant, heads)
-        }
-    }
-    flyBot, flyWeights := os.Getenv("FLY_BOT"), os.Getenv("FLY_W_TRAINED")
-    if flyBot != "" {
-        flyURL := os.Getenv("FLY_URL")
-        if flyURL == "" {
-            flyURL = "http://localhost:" + port
-        }
-        api.FlySpawn = func(code, botname, variant string) error {
-            parts := strings.Fields(flyBot)
-            args := append(append([]string{}, parts[1:]...), "--join", code, "--name", botname, "--url", flyURL)
-if flyWeights != "" {
-args = append(args, "--w", flyWeights)
-}
-            cmd := exec.Command(parts[0], args...)
-            if f, err := os.OpenFile("/tmp/musca-fly.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); err == nil {
-                cmd.Stdout, cmd.Stderr = f, f
-            }
-            log.Printf("fly spawn %s variant=%s code=%s", botname, variant, code)
-            return cmd.Start()
-        }
-    }
+	// Play-vs-Fly: in-process bot when fly.json loads, else python subprocess.
+	if heads, err := fly.Load(); err != nil {
+		log.Printf("fly data unavailable (%v), subprocess fallback", err)
+	} else {
+		log.Printf("fly in-process ready (variants=%v)", fly.Variants(heads))
+		api.FlyLocal = func(hub *lobby.Hub, room *lobby.Room, botname, variant string) {
+			fly.Play(hub, room.Code, botname, variant, heads)
+		}
+	}
+	flyBot, flyWeights := os.Getenv("FLY_BOT"), os.Getenv("FLY_W_TRAINED")
+	if flyBot != "" {
+		flyURL := os.Getenv("FLY_URL")
+		if flyURL == "" {
+			flyURL = "http://localhost:" + port
+		}
+		api.FlySpawn = func(code, botname, variant string) error {
+			parts := strings.Fields(flyBot)
+			args := append(append([]string{}, parts[1:]...), "--join", code, "--name", botname, "--url", flyURL)
+			if flyWeights != "" {
+				args = append(args, "--w", flyWeights)
+			}
+			cmd := exec.Command(parts[0], args...)
+			if f, err := os.OpenFile("/tmp/musca-fly.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); err == nil {
+				cmd.Stdout, cmd.Stderr = f, f
+			}
+			log.Printf("fly spawn %s variant=%s code=%s", botname, variant, code)
+			return cmd.Start()
+		}
+	}
 	log.Println("listening :" + port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }

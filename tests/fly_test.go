@@ -49,6 +49,7 @@ func TestVsFlyNoDouble(t *testing.T) {
 		To     *int    `json:"to"`
 		Die    *int    `json:"die"`
 		Action *string `json:"action"`
+		Url    *string `json:"url"`
 	}{T: "double"}
 	r.GameTurn(mc, nil, "", hi, dbl)
 	if mc.lastErr() != "doubling disabled vs fly" {

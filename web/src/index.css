@@ -134,3 +134,27 @@ body{min-height:100dvh;padding-bottom:env(safe-area-inset-bottom);-webkit-tap-hi
 @media(orientation:landscape) and (max-height:600px) and (min-width:800px){.boardWrap .sideBtn{display:block;position:relative}.boardWrap .sideBtn .btn{position:absolute;left:50%;width:100%;min-width:0;padding:.6rem .2rem;font-size:.8rem;white-space:nowrap}.boardWrap .sideBtn .btn.large{min-width:0;min-height:44px;padding:.7rem .2rem;font-size:.85rem}.boardWrap .sideBtn .btn:nth-child(1){top:50%;transform:translate(-50%,-50%)}.boardWrap .sideBtn .btn:nth-child(2){top:calc(50% + 44px);transform:translateX(-50%)}.boardWrap .sideBtn .autoRoll{position:absolute;top:50%;left:calc(100% + 8px);transform:translateY(-50%);width:max-content;text-align:center;white-space:nowrap}}
 @media(orientation:landscape) and (max-height:600px) and (min-width:800px){.boardWrap .topBar .turn.big{display:none}.boardWrap .winLabelMobile{display:block;font-size:1.1rem;white-space:nowrap}.boardWrap .rematchBox{position:absolute;right:8px;bottom:8px;z-index:20;display:flex;flex-direction:column;align-items:flex-end;gap:8px;padding:0}}
 @media(max-width:900px),(orientation:landscape) and (max-height:600px){.boardWrap{height:100vh;height:var(--apph,100dvh);max-height:none;padding-top:env(safe-area-inset-top);padding-left:max(.4rem,env(safe-area-inset-left));padding-right:max(.4rem,env(safe-area-inset-right))}body:has(.boardWrap),html:has(.boardWrap){overflow:hidden;overscroll-behavior:none}.boardWrap .pip-dot{background-image:radial-gradient(circle,var(--dice-dots) 3px,rgba(0,0,0,0) 3.6px)}.boardWrap .die{grid-template-columns:repeat(3,6px);grid-template-rows:repeat(3,6px);gap:1px}.boardWrap .dicePair.double .die{width:30px;height:30px;grid-template-columns:repeat(3,6px);grid-template-rows:repeat(3,6px);gap:1px}}
+
+/* ponytail: reaction GIFs — desktop/landscape only, hidden on mobile & portrait */
+/* ponytail: names + Send GIF live in the header strip ABOVE the board */
+.phRow{display:flex;align-items:center;gap:8px}
+.playerHeader .phRow{position:relative}
+/* ponytail: board wood ends 108px short of the row edge (offTray 54 + sideBtn 96 + gaps) — mirror it so the Send GIF button aligns with the board edge, not the auto-roll rail */
+@media(min-width:901px) and (min-height:601px) and (orientation:landscape){.playerHeader{padding-right:108px}}
+.gifBtn{margin-top:0}
+.gifBtn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.gifCard{position:fixed;top:70px;z-index:46;background:var(--card);border:1px solid var(--accent);border-radius:14px;padding:6px;box-shadow:0 10px 28px rgba(0,0,0,.55);animation:gifPop .25s ease;overflow:hidden;pointer-events:none}
+.gifCard.recv{left:max(14px,calc((100vw - 1200px)/2 - 350px))}
+.gifCard.sent{right:max(14px,calc((100vw - 1200px)/2 - 350px))}
+.gifCard img{width:350px;max-width:46vw;height:auto;display:block;border-radius:10px}
+@keyframes gifPop{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+.pickerBackdrop{position:fixed;inset:0;z-index:45}
+.gifPickerWrap{position:absolute;top:calc(100% + 8px);right:0;z-index:50}
+.gifPicker{width:340px;max-height:400px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;box-shadow:0 16px 48px rgba(0,0,0,.6)}
+.gifSearch{width:100%}
+.gifHint{padding:10px;text-align:center}
+.gifGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;overflow-y:auto;max-height:320px}
+.gifThumb{border:none;background:none;padding:0;cursor:pointer;border-radius:8px;overflow:hidden;aspect-ratio:1/1;width:100%}
+.gifThumb img{width:100%;height:100%;object-fit:cover;display:block}
+.gifThumb:hover{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:900px),(max-height:600px),(orientation:portrait){.gifBtn,.gifCard,.gifPickerWrap,.pickerBackdrop{display:none!important}}

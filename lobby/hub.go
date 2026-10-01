@@ -25,7 +25,8 @@ type Room struct {
 	DoubleOffer     *DoubleOffer
 	DoubledThisTurn bool
 	LastDoubler     int
-	VsFly           bool // bot game: doubling disabled, bot plays a seat
+	VsFly           bool     // bot game: doubling disabled, bot plays a seat
+	gifLast         [2]int64 // unix nanos of last gif per seat, rate-limit
 
 	mu        sync.Mutex
 	subs      map[chan []byte]struct{}

@@ -41,6 +41,7 @@ func TestConcurrentWriteNoPanic(t *testing.T) {
 				To     *int    `json:"to"`
 				Die    *int    `json:"die"`
 				Action *string `json:"action"`
+				Url    *string `json:"url"`
 			}{T: "move", From: &from, To: &to, Die: &die}, ch)
 		}()
 	}

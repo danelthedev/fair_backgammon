@@ -2,6 +2,9 @@ package lobby
 
 import (
 	"encoding/json"
+	"net/url"
+	"strings"
+	"time"
 
 	"fair_backgammon/game"
 )
@@ -19,6 +22,7 @@ func (r *Room) GameTurn(conn interface {
 	To     *int    `json:"to"`
 	Die    *int    `json:"die"`
 	Action *string `json:"action"`
+	Url    *string `json:"url"`
 }, replyCh ...chan []byte) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -36,6 +40,11 @@ func (r *Room) GameTurn(conn interface {
 			return
 		}
 		_ = conn.WriteMessage(1, b)
+	}
+	// ponytail: gif reactions bypass turn/game-over checks, ephemeral broadcast
+	if msg.T == "gif" {
+		r.handleGifLocked(idx, msg.Url, sendErr)
+		return
 	}
 	if TurnHandler != nil {
 		TurnHandler(r, idx, msg.T, msg.From, msg.To, msg.Die, sendErr)
@@ -129,19 +138,19 @@ func (r *Room) GameTurn(conn interface {
 		}
 		if turnEnded {
 			if ok, mult := g.CheckTechnicalWin(game.Player(idx)); ok {
-			wp := game.Player(idx)
-			r.Scores[wp] += mult * r.Stake()
-			r.Rematch = [2]bool{false, false}
-			r.DoubleOffer = nil
-			r.Game.Off[wp] = 15
-			b, _ := json.Marshal(map[string]any{"t": "win", "winner": wp, "winnerName": r.Players[wp], "scores": r.Scores, "reason": "tehnic"})
-			for ch := range r.subs {
-				select {
-				case ch <- b:
-				default:
+				wp := game.Player(idx)
+				r.Scores[wp] += mult * r.Stake()
+				r.Rematch = [2]bool{false, false}
+				r.DoubleOffer = nil
+				r.Game.Off[wp] = 15
+				b, _ := json.Marshal(map[string]any{"t": "win", "winner": wp, "winnerName": r.Players[wp], "scores": r.Scores, "reason": "tehnic"})
+				for ch := range r.subs {
+					select {
+					case ch <- b:
+					default:
+					}
 				}
-			}
-			r.broadcastStateLocked()
+				r.broadcastStateLocked()
 			}
 		}
 	case "pass":
@@ -297,6 +306,36 @@ func (r *Room) GameTurn(conn interface {
 		}
 	default:
 		sendErr("unknown t")
+	}
+}
+
+// ponytail: ephemeral gif relay — no state stored, no turn requirement.
+func (r *Room) handleGifLocked(idx int, raw *string, sendErr func(string)) {
+	if raw == nil || *raw == "" {
+		sendErr("url required")
+		return
+	}
+	u := strings.TrimSpace(*raw)
+	if len(u) > 500 || !strings.HasPrefix(u, "https://") {
+		sendErr("bad gif url")
+		return
+	}
+	if _, err := url.ParseRequestURI(u); err != nil {
+		sendErr("bad gif url")
+		return
+	}
+	now := time.Now().UnixNano()
+	if now-r.gifLast[idx] < 3*int64(time.Second) {
+		sendErr("gif too fast")
+		return
+	}
+	r.gifLast[idx] = now
+	b, _ := json.Marshal(map[string]any{"t": "gif", "from": idx, "url": u})
+	for ch := range r.subs {
+		select {
+		case ch <- b:
+		default:
+		}
 	}
 }
 
