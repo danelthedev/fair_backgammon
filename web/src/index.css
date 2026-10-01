@@ -154,6 +154,12 @@ body{min-height:100dvh;padding-bottom:env(safe-area-inset-bottom);-webkit-tap-hi
 .gifSearch{width:100%}
 .gifHint{padding:10px;text-align:center}
 .gifGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;overflow-y:auto;max-height:320px}
+/* ponytail: thin themed scrollbar so the picker feels native */
+.gifGrid::-webkit-scrollbar{width:8px}
+.gifGrid::-webkit-scrollbar-track{background:transparent;border-radius:8px}
+.gifGrid::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px;border:2px solid var(--card)}
+.gifGrid::-webkit-scrollbar-thumb:hover{background:var(--accent);border-color:var(--card)}
+.gifGrid{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 .gifThumb{border:none;background:none;padding:0;cursor:pointer;border-radius:8px;overflow:hidden;aspect-ratio:1/1;width:100%}
 .gifThumb img{width:100%;height:100%;object-fit:cover;display:block}
 .gifThumb:hover{outline:2px solid var(--accent);outline-offset:2px}

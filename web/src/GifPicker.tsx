@@ -30,7 +30,7 @@ export function GifPicker({ onPick, onClose }: { onPick: (g: GifItem) => void; o
       <input
         className="input gifSearch"
         autoFocus
-        placeholder="Search GIFs…"
+        placeholder="Search KLIPY"
         value={q}
         onChange={e => setQ(e.target.value)}
         onKeyDown={e => {
