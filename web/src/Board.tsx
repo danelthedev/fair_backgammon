@@ -39,18 +39,18 @@ function Dice({ v, rolling, used }: { v: number; rolling: boolean; used?: boolea
   )
 }
 
-function GifCard({ url, cls }: { url: string; cls: string }) {
+function GifCard({ url, cls, off = 0 }: { url: string; cls: string; off?: number }) {
   const [err, setErr] = useState(false)
   if (err) return null
   return (
-    <div className={`gifCard ${cls}`}>
+    <div className={`gifCard ${cls}`} style={off ? { top: 70 + off * 24 } : undefined}>
       <img src={url} alt="gif reaction" loading="lazy" onError={() => setErr(true)} />
     </div>
   )
 }
 
 export function Board({ code, username, onLeave }: { code: string; username: string; onLeave: () => void }) {
-  const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler, brain, gif, sendGif } = useGame(code, username)
+  const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler, brain, gifs, sendGif } = useGame(code, username)
   const { settings } = useSettings()
   const vol = (settings.volume ?? 100) / 100
   const [selected, setSelected] = useState<number | null>(null)
@@ -847,8 +847,8 @@ export function Board({ code, username, onLeave }: { code: string; username: str
               </div>
             </div>
           )}
-          {gif && gif.from === opponentIdx && <GifCard key={gif.key} url={gif.url} cls="recv" />}
-          {gif && gif.from === myIdx && <GifCard key={gif.key} url={gif.url} cls="sent" />}
+          {(gifs ?? []).filter(g => g.from === opponentIdx).map((g, i) => (<GifCard key={g.id} url={g.url} cls="recv" off={i} />))}
+          {(gifs ?? []).filter(g => g.from === myIdx).map((g, i) => (<GifCard key={g.id} url={g.url} cls="sent" off={i} />))}
         </div>
         <div className={`offTray trough ${selected !== null && validDests.has(-2) ? 'canBearOff' : ''}`} onClick={() => { if (consumeTap()) return; if (selected !== null && validDests.has(-2)) handleDest(-2) }}>
           <div className="troughInner">

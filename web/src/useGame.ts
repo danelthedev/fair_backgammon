@@ -30,8 +30,39 @@ export function useGame(code: string, username: string) {
   const [brain, setBrain] = useState<{ units: [number, number][]; edges: [number, number][] } | null>(null)
   const [winner, setWinner] = useState<string | null>(null)
   const [winReason, setWinReason] = useState<string | null>(null)
-  const [gif, setGif] = useState<{ url: string; from: number; key: number } | null>(null)
-  const gifKey = useRef(0)
+  const [gifs, setGifs] = useState<{ url: string; from: number; id: number }[]>([])
+  const gifSeq = useRef(0)
+  const gifTimers = useRef(new Map<number, ReturnType<typeof setTimeout>>())
+  const dropGif = (id: number) => setGifs(prev => prev.filter(x => x.id !== id))
+  const armGif = (id: number, ms: number) => {
+    const old = gifTimers.current.get(id)
+    if (old) clearTimeout(old)
+    gifTimers.current.set(id, setTimeout(() => { gifTimers.current.delete(id); dropGif(id) }, ms))
+  }
+  // ponytail: measure the real gif length client-side; longer than 5s plays until it ends
+  const measureGifLen = (url: string): Promise<number> => new Promise(resolve => {
+    try {
+      const w = window as any
+      if (!w.ImageDecoder) return resolve(0)
+      ;(async () => {
+        try {
+          const blob = await (await fetch(url)).blob()
+          const dec = new w.ImageDecoder({ data: blob, type: blob.type || 'image/gif' })
+          await dec.tracks.ready
+          const t = dec.tracks.selectedTrack
+          if (!t || !Number.isFinite(t.frameCount)) { dec.close(); return resolve(0) }
+          let us = 0
+          for (let i = 0; i < t.frameCount; i++) {
+            const f = await dec.decode({ frameIndex: i })
+            us += f.duration || 0
+            f.close()
+          }
+          dec.close()
+          resolve(us / 1000)
+        } catch { resolve(0) }
+      })()
+    } catch { resolve(0) }
+  })
   const [connectionError, setConnectionError] = useState<string | null>(null)
   useEffect(() => { serverRef.current = server }, [server])
   const prevPlayersRef = useRef<string[] | null>(null)
@@ -135,7 +166,13 @@ export function useGame(code: string, username: string) {
         } else if (msg.t === 'brain') {
           if (Array.isArray(msg.units)) setBrain({ units: msg.units, edges: Array.isArray(msg.edges) ? msg.edges : [] })
         } else if (msg.t === 'gif') {
-          if (typeof msg.url === 'string' && (msg.from === 0 || msg.from === 1)) setGif({ url: msg.url, from: msg.from, key: ++gifKey.current })
+          if (typeof msg.url === 'string' && (msg.from === 0 || msg.from === 1)) {
+            const g = { url: msg.url, from: msg.from, id: ++gifSeq.current }
+            // ponytail: one live gif per sender — a new send replaces their own, the opponent's keeps playing
+            setGifs(prev => [...prev.filter(x => x.from !== g.from), g])
+            armGif(g.id, 5000)
+            measureGifLen(g.url).then(ms => { if (ms > 5000) armGif(g.id, ms) })
+          }
         } else if (msg.t === 'error') {
           setError(msg.msg)
           setTimeout(() => setError(null), 2000)
@@ -156,7 +193,7 @@ export function useGame(code: string, username: string) {
           setWinner(null)
           setWinReason(null)
           setPending([])
-          setGif(null)
+          setGifs([])
         }
       } catch {}
     }
@@ -178,12 +215,6 @@ export function useGame(code: string, username: string) {
   useEffect(() => {
     if (server) setPending([])
   }, [server?.turn])
-  // ponytail: gif reactions vanish after 5s; new gif resets the timer
-  useEffect(() => {
-    if (!gif) return
-    const t = setTimeout(() => setGif(null), 5000)
-    return () => clearTimeout(t)
-  }, [gif?.key])
   const send = (o: any) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) wsRef.current.send(JSON.stringify(o))
     else setError('ws not ready')
@@ -217,5 +248,5 @@ export function useGame(code: string, username: string) {
   const doubledThisTurn = server?.doubledThisTurn ?? false
   const lastDoubler = server?.lastDoubler ?? -1
 
-  return { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, myIdx, send, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler, brain, gif, sendGif }
+  return { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, myIdx, send, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler, brain, gifs, sendGif }
 }
