@@ -760,8 +760,8 @@ export function Board({ code, username, onLeave }: { code: string; username: str
               <div className="gifPickerWrap">
                 <GifPicker
                   onClose={() => setPickerOpen(false)}
-                  onPick={(u) => {
-                    sendGif(u)
+                  onPick={(g) => {
+                    sendGif(g.url, g.v)
                     setGifCool(Date.now())
                     setPickerOpen(false)
                   }}

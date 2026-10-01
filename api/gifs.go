@@ -43,6 +43,7 @@ type gifItem struct {
 	ID      string `json:"id"`
 	URL     string `json:"url"`
 	Preview string `json:"preview"`
+	V       string `json:"v,omitempty"` // video sibling (mp4/webm) — its duration is authoritative for long clips
 }
 
 var gifCache = struct {
@@ -131,7 +132,7 @@ func normalizeGifs(raw []byte) []byte {
 			continue
 		}
 		id := pickStr(str(m["id"]))
-		out = append(out, gifItem{ID: id, URL: u, Preview: pickGifPreview(m, u)})
+		out = append(out, gifItem{ID: id, URL: u, Preview: pickGifPreview(m, u), V: pickGifVideo(m)})
 		if len(out) >= 24 {
 			break
 		}
@@ -190,6 +191,14 @@ func pickGifURL(m map[string]any) string {
 				return str(g["url"])
 			}
 		}
+	}
+	return ""
+}
+
+// pickGifVideo grabs a playable sibling (mp4/webm); its duration is the clip's true length.
+func pickGifVideo(m map[string]any) string {
+	if v := fileFormat(m, []string{"hd", "md"}, []string{"mp4", "webm"}); v != "" {
+		return v
 	}
 	return ""
 }

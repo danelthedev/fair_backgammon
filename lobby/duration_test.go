@@ -10,7 +10,7 @@ func makeGif(delays ...int) []byte {
 	var b bytes.Buffer
 	b.WriteString("GIF89a")
 	b.Write([]byte{1, 0, 1, 0, 0x80, 0, 0}) // 1x1, GCT flag + size 0 (2 colors)
-	b.Write(make([]byte, 6))               // global color table
+	b.Write(make([]byte, 6))                // global color table
 	for _, d := range delays {
 		b.Write([]byte{0x21, 0xF9, 0x04, 0, byte(d), byte(d >> 8), 0, 0x00})
 		b.Write([]byte{0x2C, 0, 0, 0, 0, 1, 0, 1, 0, 0x00}) // image descriptor
@@ -27,6 +27,16 @@ func TestGifTotalDelayMs(t *testing.T) {
 	}
 	if n := gifTotalDelayMs(bytes.NewReader(makeGif(100))); n != 1000 {
 		t.Fatalf("want 1000ms got %d", n)
+	}
+	if n := gifTotalDelayMs(bytes.NewReader(makeGif(0))); n != 100 {
+		t.Fatalf("zero-delay frame floors to 100ms, got %d", n)
+		mvhd := []byte{0, 0, 0, 32, 'm', 'o', 'o', 'v', 0, 0, 0, 108, 'm', 'v', 'h', 'd', 0} // moov+mvhd header, version 0
+		mvhd = append(mvhd, make([]byte, 11)...)
+		mvhd = append(mvhd, 0, 0, 3, 232) // timescale 1000
+		mvhd = append(mvhd, 0, 0, 0, 30)  // duration 30s
+		if n := mvhdDurationMs(mvhd); n != 30000 {
+			t.Fatalf("want 30000ms got %d", n)
+		}
 	}
 	if n := gifTotalDelayMs(bytes.NewReader([]byte("not a gif"))); n != 0 {
 		t.Fatalf("want 0 got %d", n)

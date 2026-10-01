@@ -13,6 +13,7 @@ type turnMsg struct {
 	Die    *int    `json:"die"`
 	Action *string `json:"action"`
 	Url    *string `json:"url"`
+	V      *string `json:"v"`
 }
 
 func TestDoubleAcceptScoresStake(t *testing.T) {

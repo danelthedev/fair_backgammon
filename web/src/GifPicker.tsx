@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 
-export type GifItem = { id: string; url: string; preview: string }
+export type GifItem = { id: string; url: string; preview: string; v?: string }
 
 // ponytail: picker hits /api/gifs/* — Klipy key never touches the browser.
-export function GifPicker({ onPick, onClose }: { onPick: (url: string) => void; onClose: () => void }) {
+export function GifPicker({ onPick, onClose }: { onPick: (g: GifItem) => void; onClose: () => void }) {
   const [items, setItems] = useState<GifItem[]>([])
   const [loading, setLoading] = useState(false)
   const [q, setQ] = useState('')
@@ -35,7 +35,7 @@ export function GifPicker({ onPick, onClose }: { onPick: (url: string) => void; 
         onChange={e => setQ(e.target.value)}
         onKeyDown={e => {
           if (e.key === 'Escape') onClose()
-          if (e.key === 'Enter' && items[0]) onPick(items[0].url)
+          if (e.key === 'Enter' && items[0]) onPick(items[0])
         }}
       />
       {loading && items.length === 0 ? (
@@ -43,7 +43,7 @@ export function GifPicker({ onPick, onClose }: { onPick: (url: string) => void; 
       ) : (
         <div className="gifGrid">
           {items.map((g, i) => (
-            <button key={g.id || i} className="gifThumb" title="Send this GIF" onClick={() => onPick(g.url)}>
+            <button key={g.id || i} className="gifThumb" title="Send this GIF" onClick={() => onPick(g)}>
               <img src={g.preview || g.url} alt="gif reaction" loading="lazy" />
             </button>
           ))}

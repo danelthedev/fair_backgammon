@@ -214,7 +214,7 @@ export function useGame(code: string, username: string) {
   const requestResign = () => send({ t: 'resign' })
   const requestDouble = () => send({ t: 'double' })
   const respondDouble = (action: 'accept' | 'reject' | 'redouble') => send({ t: 'double_response', action })
-  const sendGif = (url: string) => send({ t: 'gif', url })
+  const sendGif = (url: string, v?: string) => send(v ? { t: 'gif', url, v } : { t: 'gif', url })
 
   const myIdx = server ? server.players.indexOf(username) : -1
   const myTurn = server ? server.turn === myIdx : false

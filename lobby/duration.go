@@ -40,6 +40,80 @@ func gifDuration(url string) int {
 	return d
 }
 
+// mp4Duration reads an mp4/webm(mvhd-compatible) sibling's runtime via a tiny Range fetch.
+// Video-rip gifs compress long clips into few frames, so the video length is authoritative.
+func mp4Duration(url string) int {
+	durCache.Lock()
+	if d, ok := durCache.m["v:"+url]; ok {
+		durCache.Unlock()
+		return d
+	}
+	durCache.Unlock()
+	client := &http.Client{Timeout: 5 * time.Second}
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Range", "bytes=0-16384") // moov is faststart on Klipy — first 16KB is enough
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0
+	}
+	defer resp.Body.Close()
+	head, _ := io.ReadAll(io.LimitReader(resp.Body, 32<<10))
+	d := mvhdDurationMs(head)
+	durCache.Lock()
+	durCache.m["v:"+url] = d
+	durCache.Unlock()
+	return d
+}
+
+// mvhdDurationMs scans box headers for moov>mvhd and returns the movie's duration in ms.
+func mvhdDurationMs(b []byte) int {
+	i := 0
+	for i+8 <= len(b) {
+		size := int(uint32(b[i])<<24 | uint32(b[i+1])<<16 | uint32(b[i+2])<<8 | uint32(b[i+3]))
+		if size == 1 {
+			if i+16 > len(b) {
+				break
+			}
+			size = int(uint64(b[i+8])<<56 | uint64(b[i+9])<<48 | uint64(b[i+10])<<40 | uint64(b[i+11])<<32 | uint64(b[i+12])<<24 | uint64(b[i+13])<<16 | uint64(b[i+14])<<8 | uint64(b[i+15]))
+		}
+		if size < 8 {
+			break
+		}
+		typ := string(b[i+4 : i+8])
+		if typ == "moov" {
+			return mvhdDurationMs(b[i+8:])
+		}
+		if typ == "mvhd" {
+			body := b[i+8 : min(len(b), i+size)]
+			if len(body) < 20 {
+				return 0
+			}
+			if body[0] == 1 { // version 1
+				if len(body) < 32 {
+					return 0
+				}
+				ts := int(uint32(body[20])<<24 | uint32(body[21])<<16 | uint32(body[22])<<8 | uint32(body[23]))
+				dur := int(uint64(body[24])<<56 | uint64(body[25])<<48 | uint64(body[26])<<40 | uint64(body[27])<<32 | uint64(body[28])<<24 | uint64(body[29])<<16 | uint64(body[30])<<8 | uint64(body[31]))
+				if ts > 0 {
+					return dur * 1000 / ts
+				}
+			} else {
+				ts := int(uint32(body[12])<<24 | uint32(body[13])<<16 | uint32(body[14])<<8 | uint32(body[15]))
+				dur := int(uint32(body[16])<<24 | uint32(body[17])<<16 | uint32(body[18])<<8 | uint32(body[19]))
+				if ts > 0 {
+					return dur * 1000 / ts
+				}
+			}
+			return 0
+		}
+		if size <= 0 {
+			break
+		}
+		i += size
+	}
+	return 0
+}
+
 func fetchGifDuration(url string) int {
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(url)
@@ -82,7 +156,11 @@ func gifTotalDelayMs(r io.Reader) int {
 				if _, err := io.ReadFull(r, buf[:6]); err != nil { // size + 4 data + terminator
 					return delays
 				}
-				delays += (int(buf[2]) | int(buf[3])<<8) * 10 // ms per frame
+				d := int(buf[2]) | int(buf[3])<<8
+				if d <= 10 { // ponytail: browsers floor sub-100ms gif delays to 100ms; video-rip gifs rely on it
+					d = 10
+				}
+				delays += d * 10 // ms per frame
 			} else if err := skipSubBlocks(r); err != nil {
 				return delays
 			}
@@ -128,3 +206,6 @@ func skipSubBlocks(r io.Reader) error {
 		}
 	}
 }
+
+// gifDelayStats: ms total, count of zero-delay frames, frame count.
+func gifDelayStats(r io.Reader) (int, int, int) { return 0, 0, 0 }

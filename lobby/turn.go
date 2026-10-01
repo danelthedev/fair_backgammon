@@ -23,6 +23,7 @@ func (r *Room) GameTurn(conn interface {
 	Die    *int    `json:"die"`
 	Action *string `json:"action"`
 	Url    *string `json:"url"`
+	V      *string `json:"v"`
 }, replyCh ...chan []byte) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -43,7 +44,7 @@ func (r *Room) GameTurn(conn interface {
 	}
 	// ponytail: gif reactions bypass turn/game-over checks, ephemeral broadcast
 	if msg.T == "gif" {
-		r.handleGifLocked(idx, msg.Url, sendErr)
+		r.handleGifLocked(idx, msg.Url, msg.V, sendErr)
 		return
 	}
 	if TurnHandler != nil {
@@ -310,7 +311,7 @@ func (r *Room) GameTurn(conn interface {
 }
 
 // ponytail: ephemeral gif relay — no state stored, no turn requirement.
-func (r *Room) handleGifLocked(idx int, raw *string, sendErr func(string)) {
+func (r *Room) handleGifLocked(idx int, raw, vid *string, sendErr func(string)) {
 	if raw == nil || *raw == "" {
 		sendErr("url required")
 		return
@@ -333,6 +334,12 @@ func (r *Room) handleGifLocked(idx int, raw *string, sendErr func(string)) {
 	// ponytail: duration fetched async (network) so the room lock isn't held
 	go func() {
 		dur := gifDuration(u)
+		// video-rip gifs lie about frame delays — the mp4 sibling is the ground truth
+		if vid != nil && *vid != "" {
+			if d := mp4Duration(*vid); d > 0 {
+				dur = d
+			}
+		}
 		b, _ := json.Marshal(map[string]any{"t": "gif", "from": idx, "url": u, "dur": dur})
 		r.BroadcastRaw(b)
 	}()

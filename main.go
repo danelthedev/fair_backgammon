@@ -102,6 +102,7 @@ func wsHandler(hub *lobby.Hub) http.HandlerFunc {
 				Die    *int    `json:"die"`
 				Action *string `json:"action"`
 				Url    *string `json:"url"`
+				V      *string `json:"v"`
 			}
 			if err := json.Unmarshal(data, &msg); err != nil {
 				b, _ := json.Marshal(map[string]string{"t": "error", "msg": "bad json"})
