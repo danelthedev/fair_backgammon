@@ -128,3 +128,33 @@ func TestHotseatFlow(t *testing.T) {
 		}
 	}
 }
+
+// ponytail: hotseat rematch is instant, no second approval
+func TestHotseatInstantRematch(t *testing.T) {
+	h := lobby.NewHub()
+	r := h.CreateHotseat("solo")
+	r.Game.Board = [24]int{}
+	r.Game.Board[0] = 1
+	r.Game.Board[20] = -1
+	r.Game.Turn = 0
+	r.Game.HasRolled = true
+	r.Game.MovesLeft = []int{1}
+	r.Game.Dealt = 1
+	mc := &mockConn{}
+	ach := make(chan []byte, 64)
+	r.AddSub(ach, "solo")
+	from, to, die := 0, -2, 1
+	r.GameTurn(mc, nil, "", 0, turnMsg{T: "move", From: &from, To: &to, Die: &die}, ach)
+	if win, _ := r.Game.CheckWin(); !win {
+		t.Fatal("setup must win")
+	}
+	r.GameTurn(mc, nil, "", 1, turnMsg{T: "rematch"}, ach)
+	if r.Game.Off != ([2]int{}) || r.Game.HasRolled {
+		t.Fatal("one hotseat rematch click must start fresh")
+	}
+	for _, m := range collect(ach) {
+		if m["t"] == "error" {
+			t.Fatalf("rematch ERROR: %v", m["msg"])
+		}
+	}
+}

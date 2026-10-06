@@ -210,6 +210,10 @@ func (r *Room) GameTurn(conn interface {
 			return
 		}
 		r.Rematch[idx] = true
+		// ponytail: hotseat has no opponent to wait for, one click rematches
+		if r.Hotseat {
+			r.Rematch[1-idx] = true
+		}
 		if r.Rematch[0] && r.Rematch[1] {
 			r.Game = game.NewGameWithMods(r.Game.Mods)
 			if r.Layout != nil {
