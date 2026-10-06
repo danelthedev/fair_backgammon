@@ -30,6 +30,7 @@ export function isLegal(
     if (turn === 1 && v >= 0) return false
   }
   if (to === -2) {
+    if (die <= 0) return false // ponytail: negative die never bears off
     if (!allInHome(board, bar, turn)) return false
     if (from === -1) return false
     const dist = turn === 0 ? from + 1 : 24 - from

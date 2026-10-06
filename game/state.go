@@ -23,6 +23,11 @@ type Move struct {
 	Die  int `json:"die"`
 }
 
+type Mods struct {
+	Negative bool `json:"negative"` // dice may roll negative, moving pieces backwards
+	MaxDie   int  `json:"maxDie"`   // >6 raises max dice value, 0/<=6 = standard d6
+}
+
 type Game struct {
 	Board     [24]int `json:"board"` // +white -black
 	Bar       [2]int  `json:"bar"`
@@ -31,14 +36,35 @@ type Game struct {
 	Dice      [2]int  `json:"dice"`
 	MovesLeft []int   `json:"movesLeft"`
 	HasRolled bool    `json:"hasRolled"`
+	Mods      Mods    `json:"mods"`
 }
 
-func NewGame() *Game {
+func NewGame() *Game { return NewGameWithMods(Mods{}) }
+
+// MaxDie reports the highest die face: standard 6 unless mods raise it.
+func (g *Game) MaxDie() int {
+	if g.Mods.MaxDie > 6 {
+		if g.Mods.MaxDie > 20 {
+			return 20
+		}
+		return g.Mods.MaxDie
+	}
+	return 6
+}
+
+func NewGameWithMods(m Mods) *Game {
+	if m.MaxDie < 0 {
+		m.MaxDie = 0
+	}
+	if m.MaxDie > 20 {
+		m.MaxDie = 20
+	}
 	// ponytail: try board config file, fallback to standard
 	if g := tryLoadBoard(); g != nil {
+		g.Mods = m
 		return g
 	}
-	g := &Game{Turn: White}
+	g := &Game{Turn: White, Mods: m}
 	// white
 	g.Board[23] = 2
 	g.Board[12] = 5
@@ -98,8 +124,16 @@ func tryLoadBoard() *Game {
 func (g *Game) Clone() *Game { c := *g; c.MovesLeft = append([]int(nil), g.MovesLeft...); return &c }
 
 func (g *Game) Roll() {
-	d1 := rand.Intn(6) + 1
-	d2 := rand.Intn(6) + 1
+	max := g.MaxDie()
+	roll := func() int {
+		d := rand.Intn(max) + 1
+		// ponytail: negative mod flips sign 50/50, distance check handles backwards
+		if g.Mods.Negative && rand.Intn(2) == 0 {
+			d = -d
+		}
+		return d
+	}
+	d1, d2 := roll(), roll()
 	g.Dice = [2]int{d1, d2}
 	if d1 == d2 {
 		g.MovesLeft = []int{d1, d1, d1, d1}
@@ -191,7 +225,11 @@ func (g *Game) IsLegal(m Move) (bool, string) {
 		}
 	}
 	// to validation
+	// ponytail: negative dice move backwards, never bear off
 	if m.To == OffPos {
+		if m.Die <= 0 {
+			return false, "negative die cannot bear off"
+		}
 		if !g.allInHome(p) {
 			return false, "not all in home"
 		}

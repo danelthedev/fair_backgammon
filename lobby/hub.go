@@ -36,7 +36,17 @@ type Room struct {
 
 func NewHub() *Hub { return &Hub{games: make(map[string]*Room)} }
 
-func (h *Hub) Create(username string) *Room {
+func (h *Hub) Create(username string, mods ...game.Mods) *Room {
+	var m game.Mods
+	if len(mods) > 0 {
+		m = mods[0]
+	}
+	if m.MaxDie < 0 {
+		m.MaxDie = 0
+	}
+	if m.MaxDie > 20 {
+		m.MaxDie = 20
+	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	var code string
@@ -46,7 +56,7 @@ func (h *Hub) Create(username string) *Room {
 			break
 		}
 	}
-	r := &Room{Code: code, Game: game.NewGame(), subs: make(map[chan []byte]struct{}), userSubs: make(map[chan []byte]string), connCount: make(map[string]int)}
+	r := &Room{Code: code, Game: game.NewGameWithMods(m), subs: make(map[chan []byte]struct{}), userSubs: make(map[chan []byte]string), connCount: make(map[string]int)}
 	r.Players[0] = username
 	r.Cube = 1
 	r.LastDoubler = -1
@@ -171,6 +181,7 @@ func (r *Room) BroadcastState() {
 		"vsFly":           r.VsFly,
 		"doubledThisTurn": r.DoubledThisTurn,
 		"lastDoubler":     r.LastDoubler,
+		"mods":            r.Game.Mods,
 		"legalMoves":      r.Game.LegalMoves(),
 	})
 	for ch := range r.subs {

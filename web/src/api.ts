@@ -8,8 +8,14 @@ export async function setUsername(name: string) {
   if (!r.ok) throw new Error(await r.text())
 }
 
-export async function createLobby(): Promise<string> {
-  const r = await fetch('/api/lobby', { method: 'POST', credentials: 'include' })
+export type LobbyMods = { negative?: boolean; maxDie?: number }
+export async function createLobby(mods?: LobbyMods): Promise<string> {
+  const r = await fetch('/api/lobby', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(mods ?? {}),
+  })
   if (!r.ok) throw new Error(await r.text())
   const j = await r.json()
   return j.code

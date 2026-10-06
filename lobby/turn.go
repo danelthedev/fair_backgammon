@@ -176,7 +176,7 @@ func (r *Room) GameTurn(conn interface {
 		}
 		r.Rematch[idx] = true
 		if r.Rematch[0] && r.Rematch[1] {
-			r.Game = game.NewGame()
+			r.Game = game.NewGameWithMods(r.Game.Mods)
 			r.LastMoves = nil
 			r.Rematch = [2]bool{false, false}
 			r.Cube = 1
@@ -349,7 +349,7 @@ func (r *Room) broadcastStateLocked() {
 	msg, _ := json.Marshal(map[string]any{
 		"t": "state", "code": r.Code, "board": r.Game.Board, "bar": r.Game.Bar, "off": r.Game.Off,
 		"turn": r.Game.Turn, "dice": r.Game.Dice, "movesLeft": r.Game.MovesLeft, "hasRolled": r.Game.HasRolled, "players": r.Players, "lastMoves": r.LastMoves,
-		"scores": r.Scores, "rematch": r.Rematch, "cube": r.Cube, "doubleOffer": r.DoubleOffer, "doubledThisTurn": r.DoubledThisTurn, "lastDoubler": r.LastDoubler, "legalMoves": r.Game.LegalMoves(), "vsFly": r.VsFly,
+		"scores": r.Scores, "rematch": r.Rematch, "cube": r.Cube, "doubleOffer": r.DoubleOffer, "doubledThisTurn": r.DoubledThisTurn, "lastDoubler": r.LastDoubler, "mods": r.Game.Mods, "legalMoves": r.Game.LegalMoves(), "vsFly": r.VsFly,
 	})
 	for ch := range r.subs {
 		select {

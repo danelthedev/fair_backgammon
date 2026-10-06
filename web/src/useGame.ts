@@ -15,6 +15,7 @@ export type ServerState = {
   scores?: [number, number]
   rematch?: [boolean, boolean]
   cube?: number
+  mods?: { negative?: boolean; maxDie?: number }
   doubleOffer?: { by: number; stake: number } | null
   doubledThisTurn?: boolean
   vsFly?: boolean
@@ -120,6 +121,7 @@ export function useGame(code: string, username: string) {
             rematch: msg.rematch || [false, false],
             cube: msg.cube ?? 1,
             doubleOffer: msg.doubleOffer ?? null,
+            mods: msg.mods ?? {},
             doubledThisTurn: msg.doubledThisTurn ?? false,
             lastDoubler: msg.lastDoubler ?? -1,
             vsFly: msg.vsFly ?? false,

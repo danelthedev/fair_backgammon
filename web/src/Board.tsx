@@ -29,7 +29,15 @@ function Dice({ v, rolling, used }: { v: number; rolling: boolean; used?: boolea
     5: [0, 2, 4, 6, 8],
     6: [0, 2, 3, 5, 6, 8],
   }
-  const dots = map[cur] || []
+  const dots = map[cur]
+  // ponytail: mods allow |die|>6 and negatives — pips only cover d6, else number
+  if (!dots) {
+    return (
+      <div className={`die ${rolling ? 'rolling' : ''} ${used ? 'used' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.1rem', color: '#111' }}>
+        {cur}
+      </div>
+    )
+  }
   return (
     <div className={`die ${rolling ? 'rolling' : ''} ${used ? 'used' : ''}`}>
       {Array.from({ length: 9 }).map((_, i) => (
@@ -348,6 +356,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
       if (myIdx === 1 && v >= 0) return false
     }
     if (to === -2) {
+      if (die <= 0) return false // ponytail: negative die never bears off
       if (!allInHome(local.board, local.bar, myIdx)) return false
       if (from === -1) return false
       const dist = myIdx === 0 ? from + 1 : 24 - from
@@ -447,6 +456,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
                 if (myIdx === 1 && v >= 0) return false
               }
               if (to === -2) {
+      if (die <= 0) return false // ponytail: negative die never bears off
                 const allHome = (() => {
                   if (curBar[myIdx] > 0) return false
                   if (myIdx === 0) return curBoard.slice(6).every(v => v <= 0)

@@ -193,6 +193,7 @@ export function SettingsButton() {
       </button>
       {open && (
         <div
+          className="settingsCard"
           style={{
             position: 'absolute',
             top: '42px',
@@ -214,14 +215,14 @@ export function SettingsButton() {
           onClick={e => e.stopPropagation()}
         >
           <Section title="Gameplay">
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem', cursor: 'pointer' }}>
+            <label className="modsOpt" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem', cursor: 'pointer' }}>
               <input type="checkbox" checked={settings.swapClicks} onChange={e => update({ swapClicks: e.target.checked })} />
               Swap left / right click
             </label>
           </Section>
 
           <Section title="Sound">
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem', cursor: 'pointer' }}>
+            <label className="modsOpt" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem', cursor: 'pointer' }}>
               <input type="checkbox" checked={settings.sound} onChange={e => update({ sound: e.target.checked })} />
               <span style={{ whiteSpace: 'nowrap', fontSize: '0.9rem' }}>Sound effects</span>
               <input

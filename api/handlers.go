@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"fair_backgammon/game"
 	"fair_backgammon/lobby"
 )
 
@@ -15,7 +16,8 @@ func usernameFromCookie(r *http.Request) string {
 	}
 	return strings.TrimSpace(c.Value)
 }
-
+// ponytail: one-liner converts lobby mods JSON to game.Mods
+func gameMods(negative bool, maxDie int) game.Mods { return game.Mods{Negative: negative, MaxDie: maxDie} }
 func HandleSession(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "method not allowed", 405)
@@ -55,7 +57,18 @@ func HandleCreateLobby(hub *lobby.Hub) http.HandlerFunc {
 			http.Error(w, "set username first", 401)
 			return
 		}
-		room := hub.Create(user)
+		var body struct {
+			Negative bool `json:"negative"`
+			MaxDie   int  `json:"maxDie"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		if body.MaxDie < 0 {
+			body.MaxDie = 0
+		}
+		if body.MaxDie > 20 {
+			body.MaxDie = 20
+		}
+		room := hub.Create(user, gameMods(body.Negative, body.MaxDie))
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"code": room.Code})
 	}
@@ -107,6 +120,7 @@ func HandleGetLobby(hub *lobby.Hub) http.HandlerFunc {
 			"off":        room.Game.Off,
 			"turn":       room.Game.Turn,
 			"dice":       room.Game.Dice,
+			"mods":       room.Game.Mods,
 			"legalMoves": room.Game.LegalMoves(),
 		})
 	}
