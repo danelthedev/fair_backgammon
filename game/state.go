@@ -72,6 +72,37 @@ func clampPower(n int) int {
 }
 
 // MaxDie reports the highest die face: standard 6 unless mods raise it.
+// Layout is a custom starting position, any checker counts.
+type Layout struct {
+	Board [24]int `json:"board"`
+	Bar   [2]int  `json:"bar"`
+	Off   [2]int  `json:"off"`
+	Turn  Player  `json:"turn"`
+}
+
+// ApplyLayout validates and installs a custom starting position.
+func (g *Game) ApplyLayout(l Layout) error {
+	tot := [2]int{l.Bar[0] + l.Off[0], l.Bar[1] + l.Off[1]}
+	if l.Bar[0] < 0 || l.Bar[1] < 0 || l.Off[0] < 0 || l.Off[1] < 0 {
+		return fmt.Errorf("bar/off can't be negative")
+	}
+	for _, v := range l.Board {
+		if v > 0 {
+			tot[0] += v
+		} else {
+			tot[1] -= v
+		}
+	}
+	if tot[0] < 1 || tot[1] < 1 {
+		return fmt.Errorf("each side needs at least 1 checker")
+	}
+	g.Board, g.Bar, g.Off = l.Board, l.Bar, l.Off
+	// ponytail: starter randomized by caller (create), alternates via rematch swap
+	g.MovesLeft = nil
+	g.HasRolled = false
+	return nil
+}
+
 func (g *Game) MaxDie() int {
 	if g.Mods.MaxDie > 6 {
 		if g.Mods.MaxDie > 20 {
@@ -530,11 +561,21 @@ func (g *Game) LegalMoves() []Move {
 }
 
 func (g *Game) CheckWin() (bool, Player) {
-	if g.Off[White] >= 15 {
-		return true, White
-	}
-	if g.Off[Black] >= 15 {
-		return true, Black
+	// ponytail: win = everything borne off (custom layouts may total <15)
+	for _, p := range []Player{White, Black} {
+		if g.Off[p] == 0 || g.Bar[p] > 0 {
+			continue
+		}
+		rest := false
+		for _, v := range g.Board {
+			if (p == White && v > 0) || (p == Black && v < 0) {
+				rest = true
+				break
+			}
+		}
+		if !rest {
+			return true, p
+		}
 	}
 	return false, White
 }

@@ -35,9 +35,10 @@ func TestDoubleAcceptScoresStake(t *testing.T) {
 	if r.Cube != 2 || r.DoubleOffer != nil {
 		t.Fatalf("accept bad cube=%d offer=%+v", r.Cube, r.DoubleOffer)
 	}
-	// win awards the stake, not 1
+	// win awards stake x payout: loser bore off nothing = gammon (2x2=4)
 	r.Game.Board = [24]int{}
 	r.Game.Board[0] = 1
+	r.Game.Board[20] = -1
 	r.Game.Bar = [2]int{}
 	r.Game.Off = [2]int{14, 0}
 	r.Game.Turn = 0
@@ -45,8 +46,27 @@ func TestDoubleAcceptScoresStake(t *testing.T) {
 	r.Game.MovesLeft = []int{1}
 	from, to, die := 0, -2, 1
 	r.GameTurn(mc, nil, "", 0, turnMsg{T: "move", From: &from, To: &to, Die: &die})
-	if r.Scores[0] != 2 || r.Scores[1] != 0 {
-		t.Fatalf("scores %v, want [2 0]", r.Scores)
+	if r.Scores[0] != 4 || r.Scores[1] != 0 {
+		t.Fatalf("scores %v, want [4 0]", r.Scores)
+	}
+
+	// loser bore off one = single win, stake only (2)
+	r2 := h.Create("alice2")
+	h.Join(r2.Code, "bob2")
+	r2.GameTurn(mc, nil, "", 0, turnMsg{T: "double"})
+	act2 := "accept"
+	r2.GameTurn(mc, nil, "", 1, turnMsg{T: "double_response", Action: &act2})
+	r2.Game.Board = [24]int{}
+	r2.Game.Board[0] = 1
+	r2.Game.Board[20] = -1
+	r2.Game.Bar = [2]int{}
+	r2.Game.Off = [2]int{14, 1}
+	r2.Game.Turn = 0
+	r2.Game.HasRolled = true
+	r2.Game.MovesLeft = []int{1}
+	r2.GameTurn(mc, nil, "", 0, turnMsg{T: "move", From: &from, To: &to, Die: &die})
+	if r2.Scores[0] != 2 || r2.Scores[1] != 0 {
+		t.Fatalf("scores %v, want [2 0]", r2.Scores)
 	}
 }
 
@@ -167,5 +187,46 @@ func TestDoubleAlternatesBetweenPlayers(t *testing.T) {
 	r2.GameTurn(mc, nil, "", 0, turnMsg{T: "double_response", Action: &act})
 	if r2.Cube != 8 {
 		t.Fatalf("cube=%d want 8", r2.Cube)
+	}
+}
+
+// ponytail: resign pays the finished position — single/gammon/backgammon
+func TestResignPayouts(t *testing.T) {
+	setup := func() (*lobby.Room, *mockConn) {
+		h := lobby.NewHub()
+		r := h.Create("alice")
+		h.Join(r.Code, "bob")
+		return r, &mockConn{}
+	}
+	// single: loser bore off some
+	r, mc := setup()
+	r.Game.Board = [24]int{}
+	r.Game.Board[10] = 1
+	r.Game.Board[20] = -1
+	r.Game.Off = [2]int{0, 5}
+	r.GameTurn(mc, nil, "", 1, turnMsg{T: "resign"})
+	if r.Scores[0] != 1 {
+		t.Fatalf("resign single scores %v, want [1 0]", r.Scores)
+	}
+	if win, _ := r.Game.CheckWin(); !win {
+		t.Fatal("resigned game must be over")
+	}
+	// gammon: loser bore off nothing
+	r, mc = setup()
+	r.Game.Board = [24]int{}
+	r.Game.Board[10] = 1
+	r.Game.Board[20] = -1
+	r.GameTurn(mc, nil, "", 1, turnMsg{T: "resign"})
+	if r.Scores[0] != 2 {
+		t.Fatalf("resign gammon scores %v, want [2 0]", r.Scores)
+	}
+	// backgammon: loser on the bar
+	r, mc = setup()
+	r.Game.Board = [24]int{}
+	r.Game.Board[10] = 1
+	r.Game.Bar = [2]int{0, 1}
+	r.GameTurn(mc, nil, "", 1, turnMsg{T: "resign"})
+	if r.Scores[0] != 3 {
+		t.Fatalf("resign backgammon scores %v, want [3 0]", r.Scores)
 	}
 }

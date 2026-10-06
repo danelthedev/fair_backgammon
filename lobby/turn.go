@@ -212,6 +212,9 @@ func (r *Room) GameTurn(conn interface {
 		r.Rematch[idx] = true
 		if r.Rematch[0] && r.Rematch[1] {
 			r.Game = game.NewGameWithMods(r.Game.Mods)
+			if r.Layout != nil {
+				_ = r.Game.ApplyLayout(*r.Layout) // validated at create
+			}
 			r.LastMoves = nil
 			r.Rematch = [2]bool{false, false}
 			r.Cube = 1
@@ -242,10 +245,23 @@ func (r *Room) GameTurn(conn interface {
 			return
 		}
 		winnerIdx := 1 - idx
-		r.Scores[winnerIdx] += r.Stake()
+		// ponytail: resign pays like the finished position — gammon/backgammon count
+		mult := g.WinMultiplier(game.Player(winnerIdx))
+		r.Scores[winnerIdx] += mult * r.Stake()
 		r.Rematch = [2]bool{false, false}
 		r.DoubleOffer = nil
-		r.Game.Off[winnerIdx] = 15
+		// ponytail: clear winner off the board so CheckWin/rematch see game over
+		for i, v := range g.Board {
+			if winnerIdx == 0 && v > 0 {
+				g.Off[winnerIdx] += v
+				g.Board[i] = 0
+			} else if winnerIdx == 1 && v < 0 {
+				g.Off[winnerIdx] -= v
+				g.Board[i] = 0
+			}
+		}
+		g.Off[winnerIdx] += g.Bar[winnerIdx]
+		g.Bar[winnerIdx] = 0
 		b, _ := json.Marshal(map[string]any{"t": "win", "winner": winnerIdx, "winnerName": r.Players[winnerIdx], "scores": r.Scores, "reason": "resign"})
 		for ch := range r.subs {
 			select {

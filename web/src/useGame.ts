@@ -139,7 +139,9 @@ export function useGame(code: string, username: string) {
           if (msg.scores && msg.rematch && !msg.rematch[0] && !msg.rematch[1] && msg.board) {
             const off0 = msg.off?.[0] ?? 0
             const off1 = msg.off?.[1] ?? 0
-            if (off0 < 15 && off1 < 15) { setWinner(null); setWinReason(null) }
+            // ponytail: fresh game (rematch accepted) clears banner — NOT merely off<15,
+            // or custom-total wins get wiped by their own trailing state
+            if (off0 === 0 && off1 === 0) { setWinner(null); setWinReason(null) }
           }
           if ((msg.players[0] === "" || msg.players[1] === "") && msg.players.includes(username)) {
             const oppIdx = msg.players[0] === username ? 1 : 0

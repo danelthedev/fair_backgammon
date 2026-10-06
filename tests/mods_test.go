@@ -227,3 +227,44 @@ func TestAllowZero(t *testing.T) {
 		t.Fatal("only a 0 die means no legal moves")
 	}
 }
+
+// ponytail: custom layouts validate totals
+func TestApplyLayout(t *testing.T) {
+	g := game.NewGame()
+	std := game.Layout{Board: g.Board, Bar: g.Bar, Off: g.Off, Turn: g.Turn}
+	if err := game.NewGame().ApplyLayout(std); err != nil {
+		t.Fatalf("standard layout must validate: %v", err)
+	}
+	big := std
+	big.Board[5] += 10 // no stack limit anymore
+	if err := game.NewGame().ApplyLayout(big); err != nil {
+		t.Fatalf("arbitrary stacks must validate: %v", err)
+	}
+	empty := std
+	for i := range empty.Board {
+		if empty.Board[i] < 0 {
+			empty.Board[i] = 0
+		}
+	}
+	if err := game.NewGame().ApplyLayout(empty); err == nil {
+		t.Fatal("empty side must fail")
+	}
+}
+
+// ponytail: bearing off everything wins even when totals <15
+func TestSmallWin(t *testing.T) {
+	g := game.NewGame()
+	g.Board = [24]int{}
+	g.Board[0] = 1
+	g.Bar = [2]int{}
+	g.Off = [2]int{2, 0} // all 3 white off... craft: 1 on board + 2 off = all
+	g.Turn = game.White
+	g.HasRolled = true
+	g.MovesLeft = []int{1}
+	if err := g.Apply(game.Move{From: 0, To: game.OffPos, Die: 1}); err != nil {
+		t.Fatalf("bear off: %v", err)
+	}
+	if win, w := g.CheckWin(); !win || w != game.White {
+		t.Fatalf("all borne off must win, got win=%v w=%v off=%v", win, w, g.Off)
+	}
+}

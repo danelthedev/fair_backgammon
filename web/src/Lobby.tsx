@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createLobby, createVsFly, joinLobby, setUsername } from './api'
+import { LayoutEditor, loadLayouts, type SavedLayout } from './LayoutEditor'
 
 // Bot registry: add future bots here; the dropdown renders from this list.
 const BOTS = [
@@ -22,6 +23,9 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
   // ponytail: 0 = power-up off, else uses per game
   const [pus, setPus] = useState({ reroll: 0, skip: 0, protect: 0 })
   const setPu = (k: keyof typeof pus, v: number) => setPus(p => ({ ...p, [k]: v }))
+  const [layouts, setLayouts] = useState<SavedLayout[]>(loadLayouts)
+  const [layoutSel, setLayoutSel] = useState('standard')
+  const [editorOpen, setEditorOpen] = useState(false)
   const ensureUser = async () => {
     if (!user.trim()) throw new Error('enter username')
     await setUsername(user.trim())
@@ -30,7 +34,8 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
   const handleCreate = async () => {
     try {
       await ensureUser()
-      const c = await createLobby({ negative, negPct: negative ? negPct : 0, maxDie: bigDice ? maxDie : 0, noDouble4x, allowZero, powers: { ...pus } })
+      const sel = layouts.find(l => l.name === layoutSel)
+      const c = await createLobby({ negative, negPct: negative ? negPct : 0, maxDie: bigDice ? maxDie : 0, noDouble4x, allowZero, powers: { ...pus }, layout: sel ? { board: sel.board, bar: sel.bar, off: sel.off, turn: sel.turn } : undefined })
       setCreated(c)
       setErr(null)
       onEnter(c, user.trim())
@@ -94,6 +99,16 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
 
         {showMods && (
           <div className="card modsCard">
+            <div className="modsGroup">
+              <div className="modsGroupTitle">Board</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <select className="input" value={layoutSel} onChange={e => setLayoutSel(e.target.value)} aria-label="board layout" style={{ flex: 1 }}>
+                  <option value="standard">Standard</option>
+                  {layouts.map(l => <option key={l.name} value={l.name}>{l.name}</option>)}
+                </select>
+                <button className="btn" onClick={() => setEditorOpen(true)}>Boards…</button>
+              </div>
+            </div>
             <div className="modsGroup">
               <div className="modsGroupTitle">Dice</div>
             <label className={`modsOpt ${negative ? 'on' : ''}`}>
@@ -177,6 +192,7 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
       </div>
 
       {err && <div className="error" style={{ maxWidth: 420, marginLeft: 'auto', marginRight: 'auto' }}>{err}</div>}
+      {editorOpen && <LayoutEditor onClose={() => { setEditorOpen(false); setLayouts(loadLayouts()) }} onSave={l => { setLayouts(loadLayouts()); setLayoutSel(l.name); setEditorOpen(false) }} />}
     </div>
   )
 }

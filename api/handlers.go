@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"math/rand"
 	"net/http"
 	"strings"
 
@@ -71,6 +72,7 @@ func HandleCreateLobby(hub *lobby.Hub) http.HandlerFunc {
 				Skip    int `json:"skip"`
 				Protect int `json:"protect"`
 			} `json:"powers"`
+			Layout *game.Layout `json:"layout"`
 		}
 		_ = json.NewDecoder(r.Body).Decode(&body)
 		if body.MaxDie < 0 {
@@ -80,6 +82,15 @@ func HandleCreateLobby(hub *lobby.Hub) http.HandlerFunc {
 			body.MaxDie = 20
 		}
 		room := hub.Create(user, gameMods(body.Negative, body.MaxDie, body.NoDouble4x, body.NegPct, body.AllowZero, body.Powers.Reroll, body.Powers.Skip, body.Powers.Protect))
+		if body.Layout != nil {
+			if err := room.Game.ApplyLayout(*body.Layout); err != nil {
+				http.Error(w, "bad layout: "+err.Error(), 400)
+				return
+			}
+			room.Layout = body.Layout
+			// ponytail: random starter; rematch swaps seats so it alternates
+			room.Game.Turn = game.Player(rand.Intn(2))
+		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"code": room.Code})
 	}

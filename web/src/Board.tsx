@@ -127,9 +127,12 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   // ponytail: notify at turn start; deferred to anim end when opponent moves play
   const prevTurn = useRef(server?.turn)
   useEffect(() => {
-    if (prevTurn.current !== undefined && server && server.turn !== prevTurn.current && server.players[server.turn] === username && server.players[0] && server.players[1] && !server.lastMoves?.length) sfx.turn()
+    // ponytail: no turn chime for the loser when the game just ended
+    if (!winner && prevTurn.current !== undefined && server && server.turn !== prevTurn.current && server.players[server.turn] === username && server.players[0] && server.players[1] && !server.lastMoves?.length) sfx.turn()
     prevTurn.current = server?.turn
-  }, [server?.turn])
+  }, [server?.turn, winner])
+  // ponytail: freeze dice the moment the game ends
+  useEffect(() => { if (winner) setRolling(false) }, [winner])
 
   // ponytail: hide Send GIF when Klipy isn't configured on the server
   const [gifOk, setGifOk] = useState(true)
