@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { createLobby, createVsFly, joinLobby, setUsername } from './api'
+import { useEffect, useState } from 'react'
+import { createHotseat, createLobby, createVsFly, joinLobby, setUsername } from './api'
 import { LayoutEditor, loadLayouts, type SavedLayout } from './LayoutEditor'
 
 // Bot registry: add future bots here; the dropdown renders from this list.
@@ -26,6 +26,12 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
   const [layouts, setLayouts] = useState<SavedLayout[]>(loadLayouts)
   const [layoutSel, setLayoutSel] = useState('standard')
   const [editorOpen, setEditorOpen] = useState(false)
+  // ponytail: menu errors auto-dismiss like in-game ones
+  useEffect(() => {
+    if (!err) return
+    const t = setTimeout(() => setErr(null), 3000)
+    return () => clearTimeout(t)
+  }, [err])
   const ensureUser = async () => {
     if (!user.trim()) throw new Error('enter username')
     await setUsername(user.trim())
@@ -61,6 +67,15 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
     } catch (e: any) { setErr(e.message) }
   }
 
+  const handleHotseat = async () => {
+    try {
+      await ensureUser()
+      const c = await createHotseat()
+      setErr(null)
+      onEnter(c, user.trim())
+    } catch (e: any) { setErr(e.message) }
+  }
+
   return (
     <div className="lobby" style={{ marginTop: '3vh' }}>
       <input className="input user" placeholder="username" value={user} onChange={e => { setUser(e.target.value); localStorage.setItem('user', e.target.value) }} maxLength={20} style={{ position: 'fixed', top: 12, left: 12, width: 200, textAlign: 'left', margin: 0, zIndex: 100 }} />
@@ -69,7 +84,7 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
 
       <div className="modsWrap">
         <div className="cards" style={{ gridTemplateColumns: '1fr', maxWidth: 340, margin: 0, flex: '0 1 340px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+          <div className="card" style={{ gap: 8 }}>
             <div style={{ display: 'flex', gap: 8, width: '100%' }}>
               <button className="btn primary large" style={{ flex: 1 }} onClick={handleCreate}>Create lobby</button>
               <button className="btn" style={{ fontSize: '.72rem', lineHeight: 1.2, padding: '.45rem .6rem', minWidth: 62, textAlign: 'center' }} onClick={() => setShowMods(v => !v)}>Add<br />mods</button>
@@ -81,19 +96,19 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
                 <button className="btn small ghost" onClick={() => { onEnter(created, user.trim()) }}>enter →</button>
               </div>
             )}
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div className="joinRow">
               <input className="input codeInput" placeholder="CODE" value={code} onChange={e => setCode(e.target.value.toUpperCase())} maxLength={4} />
               <button className="btn" onClick={() => handleJoin()}>Join</button>
             </div>
-            <div className="joinRow">
-              <select className="input codeInput" value={variant} onChange={e => setVariant(e.target.value)} aria-label="bot">
-                {BOTS.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
-              </select>
-              <button className="btn primary" onClick={handleVsFly}>Play vs Bot</button>
-            </div>
+          </div>
+          <div className="joinRow">
+            <button className="btn large" style={{ width: '100%' }} onClick={handleHotseat}>Hotseat</button>
+          </div>
+          <div className="joinRow">
+            <select className="input codeInput" value={variant} onChange={e => setVariant(e.target.value)} aria-label="bot">
+              {BOTS.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
+            </select>
+            <button className="btn primary" onClick={handleVsFly}>Play vs Bot</button>
           </div>
         </div>
 

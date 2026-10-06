@@ -58,7 +58,7 @@ function GifCard({ url, cls, off = 0 }: { url: string; cls: string; off?: number
 }
 
 export function Board({ code, username, onLeave }: { code: string; username: string; onLeave: () => void }) {
-  const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, scores, rematch, requestRematch, requestResign, useReroll, useSkip, useProtect, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler, brain, gifs, sendGif } = useGame(code, username)
+  const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, myIdx, hotseat, scores, rematch, requestRematch, requestResign, useReroll, useSkip, useProtect, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler, brain, gifs, sendGif } = useGame(code, username)
   const { settings } = useSettings()
   const vol = (settings.volume ?? 100) / 100
   const [selected, setSelected] = useState<number | null>(null)
@@ -139,7 +139,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   useEffect(() => {
     fetch('/api/gifs/trending?limit=1').then(r => setGifOk(r.ok)).catch(() => setGifOk(false))
   }, [])
-  const myIdx = server ? server.players.indexOf(username) : -1
+  // ponytail: myIdx comes from useGame (hotseat-aware, follows the turn seat)
 
   // ponytail: capture knock instead of slide when a blot gets hit
   const sfx = {
@@ -175,22 +175,33 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   // ponytail: opponent anim only, mover sees instant
   // layout effect: set animBoard before paint so the final board never flashes
   // (instant bot turns used to paint final, then replay from snapshot)
+  // ponytail: replayed move source, so my own actions can cancel a stale replay
+  const animSig = useRef<string | null>(null)
+  const sig = (s: typeof server) => JSON.stringify([s?.movesLeft, s?.hasRolled])
   useLayoutEffect(() => {
     if (!server) return
     const prev = prevServer.current
     if (!prev) { prevServer.current = server; return }
-    // turn switched -> possible anim
+    // turn switched -> (re)start replay; a newer replay cancels the old loop
     if (server.turn !== prev.turn) {
-      if (server.turn === myIdx && prev.turn !== myIdx && server.lastMoves?.length && !animBoard) {
+      if (server.turn === myIdx && prev.turn !== myIdx && server.lastMoves?.length) {
         setAnimBoard({ board: [...prev.board], bar: [...prev.bar], off: [...prev.off] })
         setAnimMoves({ moves: server.lastMoves, mover: prev.turn })
+        animSig.current = sig(server)
       }
       prevServer.current = server
       return
     }
+    // same turn: my dice changed under a running replay = I acted, go live
+    if (animBoard && server.turn === myIdx && sig(server) !== animSig.current) {
+      setAnimBoard(null); setAnimMoves(null); setFly(null)
+      animSig.current = null
+    }
     // same turn: intermediate move from opponent, keep original prev for anim
     if (server.turn !== myIdx) return // keep prev as turn-start snapshot
-    prevServer.current = server
+    // own turn with moves in flight: freeze prev at pre-move state, or a later
+    // replay (hotseat) would start post-move-1 and double-apply it (+1 bug)
+    if ((server.lastMoves?.length ?? 0) === 0) prevServer.current = server
   }, [server, myIdx, animBoard])
 
   useEffect(() => {
@@ -692,7 +703,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   const canConfirm = pending.length > 0 && !hasAnyLegal()
   const stake = cube && cube > 1 ? cube : 1
   const bothHere = !!(server.players[0] && server.players[1])
-  const canDouble = !winner && myTurn && !server.hasRolled && !animating && !rolling && bothHere && !doubleOffer && !doubledThisTurn && (lastDoubler ?? -1) !== myIdx && stake < 64 && !server.vsFly
+  const canDouble = !winner && myTurn && !hotseat && !server.hasRolled && !animating && !rolling && bothHere && !doubleOffer && !doubledThisTurn && (lastDoubler ?? -1) !== myIdx && stake < 64 && !server.vsFly
   const showDice = server.dice[0] !== 0 || server.dice[1] !== 0
   const isDouble = showDice && server.dice[0] === server.dice[1]
   // ponytail: dealt sizes display (noDouble4x mod deals 2 on doubles)
@@ -791,7 +802,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
         <div className="phRow">
           <span className="pipCount">{myPips}</span>
           <span className={`playerPill you ${myTurn ? 'active' : ''}`}>{myName} · {scores?.[myIdx] ?? 0}</span>
-          {!winner && bothHere && gifOk && (
+          {!winner && bothHere && gifOk && !hotseat && (
             <button
               className="btn small ghost gifBtn"
               onClick={() => setPickerOpen(o => !o)}

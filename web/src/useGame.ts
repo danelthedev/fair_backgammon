@@ -20,6 +20,7 @@ export type ServerState = {
   shield?: [boolean, boolean]
   rerolled?: boolean
   dealt?: number
+  hotseat?: boolean
   doubleOffer?: { by: number; stake: number } | null
   doubledThisTurn?: boolean
   vsFly?: boolean
@@ -129,6 +130,7 @@ export function useGame(code: string, username: string) {
             powerLeft: msg.powerLeft ?? [{ reroll: 0, skip: 0, protect: 0 }, { reroll: 0, skip: 0, protect: 0 }],
             shield: msg.shield ?? [false, false],
             rerolled: msg.rerolled ?? false,
+            hotseat: msg.hotseat ?? false,
             dealt: msg.dealt ?? 0,
             doubledThisTurn: msg.doubledThisTurn ?? false,
             lastDoubler: msg.lastDoubler ?? -1,
@@ -231,8 +233,9 @@ export function useGame(code: string, username: string) {
   const respondDouble = (action: 'accept' | 'reject' | 'redouble') => send({ t: 'double_response', action })
   const sendGif = (url: string, v?: string) => send(v ? { t: 'gif', url, v } : { t: 'gif', url })
 
-  const myIdx = server ? server.players.indexOf(username) : -1
-  const myTurn = server ? server.turn === myIdx : false
+  const hotseat = !!server?.hotseat
+  const myIdx = server ? (hotseat ? server.turn : server.players.indexOf(username)) : -1
+  const myTurn = server ? (hotseat ? !winner : server.turn === myIdx) : false
   const scores = server?.scores ?? [0, 0] as [number, number]
   const rematch = server?.rematch ?? [false, false] as [boolean, boolean]
   const cube = server?.cube ?? 1
@@ -240,5 +243,5 @@ export function useGame(code: string, username: string) {
   const doubledThisTurn = server?.doubledThisTurn ?? false
   const lastDoubler = server?.lastDoubler ?? -1
 
-  return { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, myIdx, send, scores, rematch, requestRematch, requestResign, useReroll, useSkip, useProtect, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler, brain, gifs, sendGif }
+  return { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, myIdx, send, scores, rematch, requestRematch, requestResign, useReroll, useSkip, useProtect, hotseat, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler, brain, gifs, sendGif }
 }

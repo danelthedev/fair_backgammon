@@ -113,6 +113,10 @@ func wsHandler(hub *lobby.Hub) http.HandlerFunc {
 				continue
 			}
 			idx := room.PlayerIndex(user)
+			// ponytail: hotseat plays both seats, act for the turn seat
+			if room.Hotseat {
+				idx = int(room.Game.Turn)
+			}
 			if idx == -1 {
 				b, _ := json.Marshal(map[string]string{"t": "error", "msg": "not in room"})
 				select {
@@ -145,6 +149,7 @@ func main() {
 	http.HandleFunc("/api/gifs/trending", api.HandleGifTrending)
 	http.HandleFunc("/api/lobby", api.HandleCreateLobby(hub))
 	http.HandleFunc("/api/lobby/vs-fly", api.HandleCreateVsFly(hub))
+	http.HandleFunc("/api/lobby/hotseat", api.HandleCreateHotseat(hub))
 	http.HandleFunc("/api/lobby/", func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(strings.ToLower(r.URL.Path), "/leave") {
 			api.HandleLeaveLobby(hub)(w, r)

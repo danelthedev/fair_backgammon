@@ -44,7 +44,7 @@ describe('Board', () => {
       addMove,
       error: null,
       winner: null,
-      myTurn: true,
+      myTurn: true, myIdx: 0,
     })
     render(<Board code="TEST" username="alice" onLeave={() => {}} />)
     const points = document.querySelectorAll('.point')
@@ -66,7 +66,7 @@ describe('Board', () => {
       addMove: vi.fn(),
       error: null,
       winner: null,
-      myTurn: true,
+      myTurn: true, myIdx: 0,
     })
     const { container } = render(<Board code="TEST" username="alice" onLeave={() => {}} />)
     expect(container.querySelectorAll('.barStack.top .checker').length).toBe(1)
@@ -93,7 +93,7 @@ describe('Board', () => {
       addMove: vi.fn(),
       error: 'alice wins!',
       winner: 'alice',
-      myTurn: true,
+      myTurn: true, myIdx: 0,
     })
     render(<Board code="TEST" username="alice" onLeave={() => {}} />)
     expect(screen.getAllByText(/alice wins!/i).length).toBeGreaterThan(0)
@@ -115,7 +115,7 @@ describe('Board', () => {
       addMove: vi.fn(),
       error: null,
       winner: null,
-      myTurn: true,
+      myTurn: true, myIdx: 0,
     })
     const { queryByText, unmount } = render(<Board code="TEST" username="alice" onLeave={() => {}} />)
     expect(queryByText('Confirm')).toBeTruthy()
@@ -133,7 +133,7 @@ describe('Board', () => {
       addMove: vi.fn(),
       error: null,
       winner: null,
-      myTurn: true,
+      myTurn: true, myIdx: 0,
     })
     const { queryByText: q2 } = render(<Board code="TEST" username="alice" onLeave={() => {}} />)
     expect(q2('Confirm')).toBeNull()
@@ -151,7 +151,7 @@ describe('Board', () => {
       addMove: vi.fn(),
       error: null,
       winner: null,
-      myTurn: true,
+      myTurn: true, myIdx: 0,
     })
     const { container } = render(<Board code="TEST" username="alice" onLeave={() => {}} />)
     expect(container.querySelectorAll('.die').length).toBe(4)
@@ -175,7 +175,7 @@ describe('Board', () => {
       addMove: vi.fn(),
       error: null,
       winner: null,
-      myTurn: true,
+      myTurn: true, myIdx: 0,
     })
     const { container } = render(<Board code="TEST" username="alice" onLeave={() => {}} />)
     expect(container.querySelectorAll('.die').length).toBe(2)
@@ -196,7 +196,7 @@ describe('Board', () => {
       addMove: vi.fn(),
       error: null,
       winner: null,
-      myTurn: true,
+      myTurn: true, myIdx: 0,
     })
     const { container } = render(<Board code="TEST" username="alice" onLeave={() => {}} />)
     expect(container.querySelectorAll('.die').length).toBe(2)
@@ -213,10 +213,34 @@ describe('Board', () => {
       addMove: vi.fn(),
       error: null,
       winner: null,
-      myTurn: true,
+      myTurn: true, myIdx: 0,
     })
     const { container: c2 } = render(<Board code="TEST" username="alice" onLeave={() => {}} />)
     expect(c2.querySelectorAll('.die').length).toBe(4)
     expect(c2.querySelectorAll('.die.used').length).toBe(2)
+  })
+
+  it('seat 1 (hotseat black) selects own checkers', () => {
+    const b = Array(24).fill(0)
+    b[20] = -1
+    mockUseGame.mockReturnValue({
+      server: mockServer({ turn: 1, dice: [3, 1], movesLeft: [3, 1], board: b }),
+      local: { board: b, bar: [0, 0], off: [0, 0] },
+      pending: [],
+      movesLeft: [3, 1],
+      roll: vi.fn(),
+      confirm: vi.fn(),
+      undo: vi.fn(),
+      addMove: vi.fn(),
+      error: null,
+      winner: null,
+      myTurn: true, myIdx: 1,
+    })
+    render(<Board code="TEST" username="alice" onLeave={() => {}} />)
+    // black at 20, die 3 -> 23 must offer a hint dot on hover/select path
+    const pt20 = document.querySelector('[data-idx="20"]')
+    expect(pt20).toBeTruthy()
+    fireEvent.click(pt20!)
+    expect(document.querySelectorAll('.point.selected').length).toBeGreaterThan(0)
   })
 })

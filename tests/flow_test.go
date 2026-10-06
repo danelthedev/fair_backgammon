@@ -80,3 +80,51 @@ func TestCustomEndToEnd(t *testing.T) {
 		}
 	}
 }
+
+// ponytail: hotseat seats both sides, moves play for the turn seat
+func TestHotseatFlow(t *testing.T) {
+	h := lobby.NewHub()
+	r := h.CreateHotseat("solo")
+	if r.Players != ([2]string{"solo", "solo"}) || !r.Hotseat {
+		t.Fatalf("hotseat seats %+v hotseat=%v", r.Players, r.Hotseat)
+	}
+	if _, _, ok := h.Join(r.Code, "intruder"); ok {
+		t.Fatal("hotseat room must be full")
+	}
+	// white opens 3-1... craft: white blot at 10, roll-less move via GameTurn
+	r.Game.Board = [24]int{}
+	r.Game.Board[10] = 1
+	r.Game.Board[20] = -1
+	r.Game.Turn = 0
+	r.Game.HasRolled = true
+	r.Game.MovesLeft = []int{3}
+	r.Game.Dealt = 1
+	mc := &mockConn{}
+	ach := make(chan []byte, 64)
+	r.AddSub(ach, "solo")
+	from, to, die := 10, 7, 3
+	// idx would be 0 for solo anyway; force turn-seat override path by playing black next
+	r.GameTurn(mc, nil, "", 0, turnMsg{T: "move", From: &from, To: &to, Die: &die}, ach)
+	if r.Game.Board[7] != 1 {
+		t.Fatal("white move not applied")
+	}
+	// now black to move (turn auto-passed? movesLeft empty -> turn=1)
+	if r.Game.Turn != 1 {
+		t.Fatalf("turn=%v, want black", r.Game.Turn)
+	}
+	// black answers through the same hotseat seat
+	r.Game.Board[20] = -1
+	r.Game.HasRolled = true
+	r.Game.MovesLeft = []int{3}
+	r.Game.Dealt = 1
+	from, to, die = 20, 23, 3
+	r.GameTurn(mc, nil, "", 1, turnMsg{T: "move", From: &from, To: &to, Die: &die}, ach)
+	if r.Game.Board[23] != -1 {
+		t.Fatal("black move not applied")
+	}
+	for _, m := range collect(ach) {
+		if m["t"] == "error" {
+			t.Fatalf("hotseat ERROR: %v", m["msg"])
+		}
+	}
+}

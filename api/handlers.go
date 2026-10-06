@@ -96,6 +96,23 @@ func HandleCreateLobby(hub *lobby.Hub) http.HandlerFunc {
 	}
 }
 
+func HandleCreateHotseat(hub *lobby.Hub) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			http.Error(w, "method not allowed", 405)
+			return
+		}
+		user := usernameFromCookie(r)
+		if user == "" {
+			http.Error(w, "set username first", 401)
+			return
+		}
+		room := hub.CreateHotseat(user)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"code": room.Code})
+	}
+}
+
 func HandleJoinLobby(hub *lobby.Hub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {

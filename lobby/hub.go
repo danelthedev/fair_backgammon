@@ -27,6 +27,7 @@ type Room struct {
 	LastDoubler     int
 	VsFly           bool         // bot game: doubling disabled, bot plays a seat
 	Layout          *game.Layout // custom starting position, re-applied on rematch
+	Hotseat         bool         // both seats local, mover acts for turn seat
 	gifLast         [2]int64     // unix nanos of last gif per seat, rate-limit
 
 	mu        sync.Mutex
@@ -62,6 +63,16 @@ func (h *Hub) Create(username string, mods ...game.Mods) *Room {
 	r.Cube = 1
 	r.LastDoubler = -1
 	h.games[code] = r
+	return r
+}
+
+// CreateHotseat seats one device on both sides; moves play for the turn seat.
+func (h *Hub) CreateHotseat(username string) *Room {
+	r := h.Create(username)
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	r.Players[1] = username
+	r.Hotseat = true
 	return r
 }
 
@@ -186,6 +197,7 @@ func (r *Room) BroadcastState() {
 		"shield":          r.Game.Shield,
 		"rerolled":        r.Game.Rerolled,
 		"dealt":           r.Game.Dealt,
+		"hotseat":         r.Hotseat,
 		"mods":            r.Game.Mods,
 		"legalMoves":      r.Game.LegalMoves(),
 	})

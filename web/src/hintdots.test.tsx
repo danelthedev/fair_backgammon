@@ -33,7 +33,7 @@ describe('right-click keeps hint dots', () => {
       addMove,
       error: null,
       winner: null,
-      myTurn: true,
+      myTurn: true, myIdx: 0,
     })
     const { container } = render(<Board code="TEST" username="alice" onLeave={() => {}} />)
     const from = container.querySelector('[data-idx="5"]')!

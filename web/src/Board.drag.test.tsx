@@ -19,7 +19,7 @@ describe('click select', () => {
       addMove: vi.fn(),
       error: null,
       winner: null,
-      myTurn: true,
+      myTurn: true, myIdx: 0,
     } as any)
     const { container } = render(<Board code="TEST" username="alice" onLeave={() => {}} />)
     const bar = container.querySelector('.barStack.top') as HTMLElement
@@ -42,7 +42,7 @@ describe('click select', () => {
       addMove,
       error: null,
       winner: null,
-      myTurn: true,
+      myTurn: true, myIdx: 0,
     } as any)
     const { container } = render(<Board code="TEST" username="alice" onLeave={() => {}} />)
     const from = container.querySelector('[data-idx="5"]') as HTMLElement
@@ -66,7 +66,7 @@ describe('click select', () => {
       addMove: vi.fn(),
       error: null,
       winner: null,
-      myTurn: true,
+      myTurn: true, myIdx: 0,
     } as any)
     const { container } = render(<Board code="TEST" username="alice" onLeave={() => {}} />)
     const point = container.querySelector('[data-idx="5"]') as HTMLElement
@@ -89,7 +89,7 @@ describe('click select', () => {
         addMove,
         error: null,
         winner: null,
-        myTurn: true,
+        myTurn: true, myIdx: 0,
       } as any)
     }
     const doDrag = (from: HTMLElement, to: HTMLElement | null) => {

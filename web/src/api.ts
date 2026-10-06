@@ -20,6 +20,12 @@ export async function createLobby(mods?: LobbyMods): Promise<string> {
   const j = await r.json()
   return j.code
 }
+export async function createHotseat(): Promise<string> {
+  const r = await fetch('/api/lobby/hotseat', { method: 'POST', credentials: 'include' })
+  if (!r.ok) throw new Error(await r.text())
+  const j = await r.json()
+  return j.code
+}
 export async function leaveLobby(code: string): Promise<void> {
   await fetch(`/api/lobby/${code}/leave`, { method: 'POST', credentials: 'include' }).catch(() => {})
 }
