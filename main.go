@@ -134,6 +134,9 @@ func sendErr(conn *websocket.Conn, s string) {
 //go:embed all:web/dist
 var dist embed.FS
 
+//go:embed res/fly-insect.gif
+var flyInsectGif []byte
+
 func main() {
 	hub := lobby.NewHub()
 
@@ -154,6 +157,12 @@ func main() {
 		api.HandleGetLobby(hub)(w, r)
 	})
 	http.HandleFunc("/ws", wsHandler(hub))
+	// ponytail: bot reply gif, embedded so the single binary serves it
+	http.HandleFunc("/res/fly-insect.gif", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/gif")
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		w.Write(flyInsectGif)
+	})
 
 	http.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

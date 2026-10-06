@@ -100,15 +100,20 @@ export function Board({ code, username, onLeave }: { code: string; username: str
       setRolling(false)
       return
     }
-    // ponytail: reroll keeps hasRolled — dice or rerolled flag changing re-fires anim
+    // ponytail: reroll keeps hasRolled — dice or rerolled flag changing re-fires anim.
+    // dead rolls auto-pass server-side (client never sees hasRolled), so any
+    // dice change counts as a fresh roll too.
     const diceKey = JSON.stringify(server?.dice ?? [])
-    const fresh = !!server?.hasRolled && (!prevHasRolled.current || diceKey !== prevDice.current || (!!server?.rerolled && !prevRerolled.current))
+    const diceChanged = diceKey !== prevDice.current && prevDice.current !== ''
+    const fresh = (!prevHasRolled.current || diceChanged || (!!server?.rerolled && !prevRerolled.current)) && diceKey !== '[0,0]'
     if (fresh) sfx.dice()
     prevHasRolled.current = !!server?.hasRolled
     prevDice.current = diceKey
     prevRerolled.current = !!server?.rerolled
-    if (!server?.hasRolled) { setRolling(false); return }
-    if (!fresh) return
+    if (!fresh) {
+      if (!server?.hasRolled) setRolling(false)
+      return
+    }
     setRolling(true)
     const t = setTimeout(() => setRolling(false), 600)
     return () => clearTimeout(t)
@@ -364,6 +369,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   const isLegal = (from: number, to: number, die: number) => {
     if (!server.hasRolled) return false
     if (!movesLeft.includes(die)) return false
+    if (from === to) return false // ponytail: zero dice are dead
     if (local.bar[myIdx] > 0 && from !== -1) return false
     if (local.bar[myIdx] === 0 && from === -1) return false
     if (from !== -1) {
@@ -373,7 +379,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
       if (myIdx === 1 && v >= 0) return false
     }
     if (to === -2) {
-      if (die <= 0) return false // ponytail: negative die never bears off
+      if (die < 1) return false // ponytail: only positive dice bear off
       if (!allInHome(local.board, local.bar, myIdx)) return false
       if (from === -1) return false
       const dist = myIdx === 0 ? from + 1 : 24 - from
@@ -389,6 +395,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     }
     if (to < 0 || to >= 24) return false
     if (from === -1) {
+      if (die < 1 || die > 6) return false // ponytail: only dice 1-6 enter from bar
       const entry = myIdx === 0 ? 24 - die : die - 1
       if (to !== entry) return false
     } else {
@@ -464,6 +471,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
             if (to === -1) continue
             const isL = (() => {
               if (!server.hasRolled) return false
+              if (curFrom === to) return false // ponytail: zero dice are dead
               if (curBar[myIdx] > 0 && curFrom !== -1) return false
               if (curBar[myIdx] === 0 && curFrom === -1) return false
               if (curFrom !== null && curFrom !== -1) {
@@ -473,7 +481,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
                 if (myIdx === 1 && v >= 0) return false
               }
               if (to === -2) {
-      if (die <= 0) return false // ponytail: negative die never bears off
+      if (die < 1) return false // ponytail: only positive dice bear off
                 const allHome = (() => {
                   if (curBar[myIdx] > 0) return false
                   if (myIdx === 0) return curBoard.slice(6).every(v => v <= 0)
@@ -495,6 +503,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
               }
               if (to < 0 || to >= 24) return false
               if (curFrom === -1) {
+                if (die < 1 || die > 6) return false // ponytail: only dice 1-6 enter from bar
                 const entry = myIdx === 0 ? 24 - die : die - 1
                 if (to !== entry) return false
               } else {
@@ -681,9 +690,11 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   const stake = cube && cube > 1 ? cube : 1
   const bothHere = !!(server.players[0] && server.players[1])
   const canDouble = !winner && myTurn && !server.hasRolled && !animating && !rolling && bothHere && !doubleOffer && !doubledThisTurn && (lastDoubler ?? -1) !== myIdx && stake < 64 && !server.vsFly
-  const showDice = server.dice[0] !== 0
+  const showDice = server.dice[0] !== 0 || server.dice[1] !== 0
   const isDouble = showDice && server.dice[0] === server.dice[1]
-  const diceValues = isDouble ? (Array(4).fill(server.dice[0]) as number[]) : ([...server.dice] as number[])
+  // ponytail: dealt sizes display (noDouble4x mod deals 2 on doubles)
+  const dealt = server.dealt || (isDouble ? 4 : 2)
+  const diceValues = (dealt > 2 ? Array(dealt).fill(server.dice[0]) : [...server.dice]) as number[]
   const remainingForDice = [...movesLeft]
   // ponytail: dice with no legal move from current spot grey out immediately
   const deadValues = myTurn && server.hasRolled ? new Set(movesLeft.filter(d => !canPlayDie(d))) : new Set<number>()

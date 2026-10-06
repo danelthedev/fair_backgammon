@@ -122,6 +122,24 @@ func Play(hub *lobby.Hub, code, botname, variant string, heads map[string]*Head)
 			continue
 		}
 		switch base.T {
+		case "gif":
+			// ponytail: human taunts the fly, fly answers in kind (no rate war:
+			// humans are already limited to 1 gif per 3s server-side)
+			var gm struct {
+				From int `json:"from"`
+			}
+			if err := json.Unmarshal(raw, &gm); err != nil {
+				continue
+			}
+			if gm.From == room.PlayerIndex(botname) {
+				continue // own echo
+			}
+			go func() {
+				time.Sleep(time.Second)
+				b, _ := json.Marshal(map[string]any{"t": "gif", "from": room.PlayerIndex(botname), "url": "/res/fly-insect.gif", "dur": 5000})
+				room.BroadcastRaw(b)
+			}()
+			continue
 		case "opponent_left":
 			return
 		case "win":

@@ -28,6 +28,7 @@ export function isLegal(
 ) {
   if (!hasRolled) return false
   if (!movesLeft.includes(die)) return false
+  if (from === to) return false // ponytail: zero dice are dead
   if (bar[turn] > 0 && from !== -1) return false
   if (bar[turn] === 0 && from === -1) return false
   if (from !== -1) {
@@ -37,7 +38,7 @@ export function isLegal(
     if (turn === 1 && v >= 0) return false
   }
   if (to === -2) {
-    if (die <= 0) return false // ponytail: negative die never bears off
+    if (die < 1) return false // ponytail: only positive dice bear off
     if (!allInHome(board, bar, turn)) return false
     if (from === -1) return false
     const dist = turn === 0 ? from + 1 : 24 - from
@@ -53,6 +54,7 @@ export function isLegal(
   }
   if (to < 0 || to >= 24) return false
   if (from === -1) {
+    if (die < 1 || die > 6) return false // ponytail: only dice 1-6 enter from bar
     const entry = turn === 0 ? 24 - die : die - 1
     if (to !== entry) return false
   } else {

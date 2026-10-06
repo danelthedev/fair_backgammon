@@ -184,6 +184,7 @@ func (r *Room) BroadcastState() {
 		"powerLeft":       r.Game.PowerLeft,
 		"shield":          r.Game.Shield,
 		"rerolled":        r.Game.Rerolled,
+		"dealt":           r.Game.Dealt,
 		"mods":            r.Game.Mods,
 		"legalMoves":      r.Game.LegalMoves(),
 	})

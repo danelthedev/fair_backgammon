@@ -24,9 +24,12 @@ type Move struct {
 }
 
 type Mods struct {
-	Negative bool        `json:"negative"` // dice may roll negative, moving pieces backwards
-	MaxDie   int         `json:"maxDie"`   // >6 raises max dice value, 0/<=6 = standard d6
-	Powers   PowerConfig `json:"powers"`   // uses per game per power-up, 0 = disabled
+	Negative   bool        `json:"negative"`   // dice may roll negative, moving pieces backwards
+	NegPct     int         `json:"negPct"`     // % chance per die to flip negative (default 33)
+	AllowZero bool        `json:"allowZero"` // dice may roll 0 (dead die)
+	NoDouble4x bool        `json:"noDouble4x"` // doubles play 2 dice, not 4
+	MaxDie     int         `json:"maxDie"`     // >6 raises max dice value, 0/<=6 = standard d6
+	Powers     PowerConfig `json:"powers"`     // uses per game per power-up, 0 = disabled
 }
 
 // PowerConfig enables power-ups: reroll a roll, skip a turn, shield blots
@@ -38,14 +41,14 @@ type PowerConfig struct {
 }
 
 type Game struct {
-	Board     [24]int `json:"board"` // +white -black
-	Bar       [2]int  `json:"bar"`
-	Off       [2]int  `json:"off"`
-	Turn      Player  `json:"turn"`
-	Dice      [2]int  `json:"dice"`
-	MovesLeft []int   `json:"movesLeft"`
-	HasRolled bool    `json:"hasRolled"`
-	Mods      Mods    `json:"mods"`
+	Board     [24]int        `json:"board"` // +white -black
+	Bar       [2]int         `json:"bar"`
+	Off       [2]int         `json:"off"`
+	Turn      Player         `json:"turn"`
+	Dice      [2]int         `json:"dice"`
+	MovesLeft []int          `json:"movesLeft"`
+	HasRolled bool           `json:"hasRolled"`
+	Mods      Mods           `json:"mods"`
 	PowerLeft [2]PowerConfig `json:"powerLeft"`
 	Shield    [2]bool        `json:"shield"`
 	Dealt     int            `json:"dealt"`    // dice dealt by current roll
@@ -53,6 +56,9 @@ type Game struct {
 }
 
 func NewGame() *Game { return NewGameWithMods(Mods{}) }
+
+// ponytail: effective negative %, 0/unset means default 33
+func (g *Game) negPct() int { return g.Mods.NegPct }
 
 // ponytail: power counts clamp 0..10, lobby UI defaults to 3 when enabled
 func clampPower(n int) int {
@@ -82,6 +88,12 @@ func NewGameWithMods(m Mods) *Game {
 	}
 	if m.MaxDie > 20 {
 		m.MaxDie = 20
+	}
+	if m.NegPct <= 0 {
+		m.NegPct = 33
+	}
+	if m.NegPct > 100 {
+		m.NegPct = 100
 	}
 	m.Powers.Reroll = clampPower(m.Powers.Reroll)
 	m.Powers.Skip = clampPower(m.Powers.Skip)
@@ -155,16 +167,20 @@ func (g *Game) Clone() *Game { c := *g; c.MovesLeft = append([]int(nil), g.Moves
 func (g *Game) Roll() {
 	max := g.MaxDie()
 	roll := func() int {
+		// ponytail: zero face only with mod, else standard 1..max
 		d := rand.Intn(max) + 1
-		// ponytail: negative mod flips sign 50/50, distance check handles backwards
-		if g.Mods.Negative && rand.Intn(2) == 0 {
+		if g.Mods.AllowZero && rand.Intn(max+1) == 0 {
+			d = 0
+		}
+		// ponytail: user-configured negative %, default ~1/3 to avoid long games
+		if d != 0 && g.Mods.Negative && rand.Intn(100) < g.negPct() {
 			d = -d
 		}
 		return d
 	}
 	d1, d2 := roll(), roll()
 	g.Dice = [2]int{d1, d2}
-	if d1 == d2 {
+	if d1 == d2 && !g.Mods.NoDouble4x {
 		g.MovesLeft = []int{d1, d1, d1, d1}
 	} else {
 		g.MovesLeft = []int{d1, d2}
@@ -302,6 +318,10 @@ func (g *Game) IsLegal(m Move) (bool, string) {
 		return false, fmt.Sprintf("die %d not available %v", m.Die, g.MovesLeft)
 	}
 	p := g.Turn
+	// ponytail: zero dice are dead — no self-moves
+	if m.From == m.To {
+		return false, "no movement"
+	}
 	// bar rule
 	if g.Bar[p] > 0 && m.From != BarPos {
 		return false, "must enter from bar"
@@ -325,8 +345,8 @@ func (g *Game) IsLegal(m Move) (bool, string) {
 	// to validation
 	// ponytail: negative dice move backwards, never bear off
 	if m.To == OffPos {
-		if m.Die <= 0 {
-			return false, "negative die cannot bear off"
+		if m.Die < 1 {
+			return false, "only positive dice can bear off"
 		}
 		if !g.allInHome(p) {
 			return false, "not all in home"
@@ -373,6 +393,10 @@ func (g *Game) IsLegal(m Move) (bool, string) {
 	// distance must match die
 	expected := 0
 	if m.From == BarPos {
+		// ponytail: only dice 1-6 enter from bar (no negatives/bigs)
+		if m.Die < 1 || m.Die > 6 {
+			return false, "only dice 1-6 can enter"
+		}
 		if p == White {
 			// white enters at 23..18 (die 1 ->23, 6->18)
 			expected = 24 - m.To // not used, compute entry point

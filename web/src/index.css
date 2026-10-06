@@ -207,3 +207,4 @@ body{min-height:100dvh;padding-bottom:env(safe-area-inset-bottom);-webkit-tap-hi
 @media(orientation:landscape) and (max-height:600px) and (min-width:800px){.boardWrap .sideBtn .powerWrap{top:50%;left:calc(100% + 8px);bottom:auto;transform:translateY(-50%)}}
 @media(max-width:900px),(orientation:landscape) and (max-height:600px){.powerWrap{position:static;transform:none}}
 @media(orientation:landscape) and (max-height:600px) and (min-width:800px){.boardWrap .sideBtn .powerWrap .autoRoll{position:static;transform:none}}
+.modsGroup input[type=range]{accent-color:var(--accent);cursor:pointer}

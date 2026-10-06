@@ -16,9 +16,10 @@ func usernameFromCookie(r *http.Request) string {
 	}
 	return strings.TrimSpace(c.Value)
 }
+
 // ponytail: one-liner converts lobby mods JSON to game.Mods
-func gameMods(negative bool, maxDie int, reroll, skip, protect int) game.Mods {
-	return game.Mods{Negative: negative, MaxDie: maxDie, Powers: game.PowerConfig{Reroll: reroll, Skip: skip, Protect: protect}}
+func gameMods(negative bool, maxDie int, noDouble4x bool, negPct int, allowZero bool, reroll, skip, protect int) game.Mods {
+	return game.Mods{Negative: negative, MaxDie: maxDie, NoDouble4x: noDouble4x, NegPct: negPct, AllowZero: allowZero, Powers: game.PowerConfig{Reroll: reroll, Skip: skip, Protect: protect}}
 }
 func HandleSession(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
@@ -60,9 +61,12 @@ func HandleCreateLobby(hub *lobby.Hub) http.HandlerFunc {
 			return
 		}
 		var body struct {
-			Negative bool `json:"negative"`
-			MaxDie   int  `json:"maxDie"`
-			Powers   struct {
+			Negative   bool `json:"negative"`
+			MaxDie     int  `json:"maxDie"`
+			NoDouble4x bool `json:"noDouble4x"`
+			AllowZero  bool `json:"allowZero"`
+			NegPct     int  `json:"negPct"`
+			Powers     struct {
 				Reroll  int `json:"reroll"`
 				Skip    int `json:"skip"`
 				Protect int `json:"protect"`
@@ -75,7 +79,7 @@ func HandleCreateLobby(hub *lobby.Hub) http.HandlerFunc {
 		if body.MaxDie > 20 {
 			body.MaxDie = 20
 		}
-		room := hub.Create(user, gameMods(body.Negative, body.MaxDie, body.Powers.Reroll, body.Powers.Skip, body.Powers.Protect))
+		room := hub.Create(user, gameMods(body.Negative, body.MaxDie, body.NoDouble4x, body.NegPct, body.AllowZero, body.Powers.Reroll, body.Powers.Skip, body.Powers.Protect))
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"code": room.Code})
 	}

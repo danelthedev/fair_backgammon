@@ -19,6 +19,7 @@ export type ServerState = {
   powerLeft?: [{ reroll: number; skip: number; protect: number }, { reroll: number; skip: number; protect: number }]
   shield?: [boolean, boolean]
   rerolled?: boolean
+  dealt?: number
   doubleOffer?: { by: number; stake: number } | null
   doubledThisTurn?: boolean
   vsFly?: boolean
@@ -128,6 +129,7 @@ export function useGame(code: string, username: string) {
             powerLeft: msg.powerLeft ?? [{ reroll: 0, skip: 0, protect: 0 }, { reroll: 0, skip: 0, protect: 0 }],
             shield: msg.shield ?? [false, false],
             rerolled: msg.rerolled ?? false,
+            dealt: msg.dealt ?? 0,
             doubledThisTurn: msg.doubledThisTurn ?? false,
             lastDoubler: msg.lastDoubler ?? -1,
             vsFly: msg.vsFly ?? false,

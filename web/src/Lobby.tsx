@@ -14,7 +14,10 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
   const [variant, setVariant] = useState('retarded')
   const [showMods, setShowMods] = useState(false)
   const [negative, setNegative] = useState(false)
+  const [negPct, setNegPct] = useState(35)
   const [bigDice, setBigDice] = useState(false)
+  const [noDouble4x, setNoDouble4x] = useState(false)
+  const [allowZero, setAllowZero] = useState(false)
   const [maxDie, setMaxDie] = useState(9)
   // ponytail: 0 = power-up off, else uses per game
   const [pus, setPus] = useState({ reroll: 0, skip: 0, protect: 0 })
@@ -27,7 +30,7 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
   const handleCreate = async () => {
     try {
       await ensureUser()
-      const c = await createLobby({ negative, maxDie: bigDice ? maxDie : 0, powers: { ...pus } })
+      const c = await createLobby({ negative, negPct: negative ? negPct : 0, maxDie: bigDice ? maxDie : 0, noDouble4x, allowZero, powers: { ...pus } })
       setCreated(c)
       setErr(null)
       onEnter(c, user.trim())
@@ -100,6 +103,15 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
                 <small>pieces can move backwards</small>
               </span>
             </label>
+            {negative && (
+              <div className="modsMax">
+                <span>Negative chance</span>
+                <span className="stepper">
+                  <input type="range" min={1} max={50} step={1} value={negPct} onChange={e => setNegPct(Number(e.target.value))} aria-label="negative dice chance" style={{ width: 110 }} />
+                  <strong>{negPct}%</strong>
+                </span>
+              </div>
+            )}
             <label className={`modsOpt ${bigDice ? 'on' : ''}`}>
               <input type="checkbox" checked={bigDice} onChange={e => setBigDice(e.target.checked)} />
               <span>
@@ -117,6 +129,20 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
                 </span>
               </div>
             )}
+            <label className={`modsOpt ${noDouble4x ? 'on' : ''}`}>
+              <input type="checkbox" checked={noDouble4x} onChange={e => setNoDouble4x(e.target.checked)} />
+              <span>
+                <strong>Fair doubles</strong>
+                <small>doubles play 2 dice, not 4</small>
+              </span>
+            </label>
+            <label className={`modsOpt ${allowZero ? 'on' : ''}`}>
+              <input type="checkbox" checked={allowZero} onChange={e => setAllowZero(e.target.checked)} />
+              <span>
+                <strong>Zero face</strong>
+                <small>dice can roll 0 (dead die)</small>
+              </span>
+            </label>
             </div>
             <div className="modsGroup">
               <div className="modsGroupTitle">Power-ups</div>
