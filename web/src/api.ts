@@ -8,7 +8,7 @@ export async function setUsername(name: string) {
   if (!r.ok) throw new Error(await r.text())
 }
 
-export type LobbyMods = { negative?: boolean; maxDie?: number }
+export type LobbyMods = { negative?: boolean; maxDie?: number; powers?: { reroll: number; skip: number; protect: number } }
 export async function createLobby(mods?: LobbyMods): Promise<string> {
   const r = await fetch('/api/lobby', {
     method: 'POST',

@@ -17,7 +17,9 @@ func usernameFromCookie(r *http.Request) string {
 	return strings.TrimSpace(c.Value)
 }
 // ponytail: one-liner converts lobby mods JSON to game.Mods
-func gameMods(negative bool, maxDie int) game.Mods { return game.Mods{Negative: negative, MaxDie: maxDie} }
+func gameMods(negative bool, maxDie int, reroll, skip, protect int) game.Mods {
+	return game.Mods{Negative: negative, MaxDie: maxDie, Powers: game.PowerConfig{Reroll: reroll, Skip: skip, Protect: protect}}
+}
 func HandleSession(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "method not allowed", 405)
@@ -60,6 +62,11 @@ func HandleCreateLobby(hub *lobby.Hub) http.HandlerFunc {
 		var body struct {
 			Negative bool `json:"negative"`
 			MaxDie   int  `json:"maxDie"`
+			Powers   struct {
+				Reroll  int `json:"reroll"`
+				Skip    int `json:"skip"`
+				Protect int `json:"protect"`
+			} `json:"powers"`
 		}
 		_ = json.NewDecoder(r.Body).Decode(&body)
 		if body.MaxDie < 0 {
@@ -68,7 +75,7 @@ func HandleCreateLobby(hub *lobby.Hub) http.HandlerFunc {
 		if body.MaxDie > 20 {
 			body.MaxDie = 20
 		}
-		room := hub.Create(user, gameMods(body.Negative, body.MaxDie))
+		room := hub.Create(user, gameMods(body.Negative, body.MaxDie, body.Powers.Reroll, body.Powers.Skip, body.Powers.Protect))
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"code": room.Code})
 	}

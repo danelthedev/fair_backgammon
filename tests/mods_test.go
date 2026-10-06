@@ -42,3 +42,55 @@ func TestModsNegativeBackwards(t *testing.T) {
 		}
 	}
 }
+
+// ponytail: one check for power-ups — reroll/skip/protect + shield expiry
+func TestPowerUps(t *testing.T) {
+	cfg := game.PowerConfig{Reroll: 1, Skip: 1, Protect: 1}
+	g := game.NewGameWithMods(game.Mods{Powers: cfg})
+	if g.PowerLeft[0] != cfg || g.PowerLeft[1] != cfg {
+		t.Fatalf("banks not init: %+v", g.PowerLeft)
+	}
+	// protect: white blot blocks black
+	g.Board = [24]int{}
+	g.Board[10] = 1
+	g.Turn = game.White
+	if err := g.UseProtect(game.White); err != nil {
+		t.Fatalf("protect: %v", err)
+	}
+	g.Turn = game.Black
+	g.Board[7] = -1
+	g.HasRolled = true
+	g.MovesLeft = []int{3}
+	if ok, _ := g.IsLegal(game.Move{From: 7, To: 10, Die: 3}); ok {
+		t.Fatal("protected blot must be blocked")
+	}
+	// shield expires when turn returns to white
+	g.SetTurn(game.White)
+	if g.Shield[game.White] {
+		t.Fatal("shield must expire on owner's next turn")
+	}
+	// reroll: once per roll, before spending
+	g.Turn = game.White
+	g.HasRolled = true
+	g.Dice = [2]int{1, 2}
+	g.MovesLeft = []int{1, 2}
+	g.Dealt = 2
+	if err := g.UseReroll(game.White); err != nil {
+		t.Fatalf("reroll: %v", err)
+	}
+	if !g.Rerolled || g.PowerLeft[game.White].Reroll != 0 {
+		t.Fatal("reroll must flag + consume")
+	}
+	if err := g.UseReroll(game.White); err == nil {
+		t.Fatal("second reroll same roll must fail")
+	}
+	// skip passes turn even unrolled
+	g2 := game.NewGameWithMods(game.Mods{Powers: cfg})
+	g2.Turn = game.Black
+	if err := g2.UseSkip(game.Black); err != nil {
+		t.Fatalf("skip: %v", err)
+	}
+	if g2.Turn != game.White || g2.PowerLeft[game.Black].Skip != 0 {
+		t.Fatal("skip must pass turn + consume")
+	}
+}

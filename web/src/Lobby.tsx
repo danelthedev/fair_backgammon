@@ -16,6 +16,9 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
   const [negative, setNegative] = useState(false)
   const [bigDice, setBigDice] = useState(false)
   const [maxDie, setMaxDie] = useState(9)
+  // ponytail: 0 = power-up off, else uses per game
+  const [pus, setPus] = useState({ reroll: 0, skip: 0, protect: 0 })
+  const setPu = (k: keyof typeof pus, v: number) => setPus(p => ({ ...p, [k]: v }))
   const ensureUser = async () => {
     if (!user.trim()) throw new Error('enter username')
     await setUsername(user.trim())
@@ -24,7 +27,7 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
   const handleCreate = async () => {
     try {
       await ensureUser()
-      const c = await createLobby({ negative, maxDie: bigDice ? maxDie : 0 })
+      const c = await createLobby({ negative, maxDie: bigDice ? maxDie : 0, powers: { ...pus } })
       setCreated(c)
       setErr(null)
       onEnter(c, user.trim())
@@ -88,6 +91,8 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
 
         {showMods && (
           <div className="card modsCard">
+            <div className="modsGroup">
+              <div className="modsGroupTitle">Dice</div>
             <label className={`modsOpt ${negative ? 'on' : ''}`}>
               <input type="checkbox" checked={negative} onChange={e => setNegative(e.target.checked)} />
               <span>
@@ -112,7 +117,36 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
                 </span>
               </div>
             )}
+            </div>
+            <div className="modsGroup">
+              <div className="modsGroupTitle">Power-ups</div>
+            {([
+              ['reroll', 'Re-roll', 'fresh dice, once per roll'],
+              ['skip', 'Skip turn', 'forfeit this turn'],
+              ['protect', 'Protection', 'blots safe next turn'],
+            ] as const).map(([k, label, sub]) => (
+              <div key={k}>
+                <label className={`modsOpt ${pus[k] > 0 ? 'on' : ''}`}>
+                  <input type="checkbox" checked={pus[k] > 0} onChange={e => setPu(k, e.target.checked ? 3 : 0)} />
+                  <span>
+                    <strong>{label}</strong>
+                    <small>{sub}</small>
+                  </span>
+                </label>
+                {pus[k] > 0 && (
+                  <div className="modsMax" style={{ marginTop: 6 }}>
+                    <span>Uses / game</span>
+                    <span className="stepper">
+                      <button className="btn small" onClick={() => setPu(k, Math.max(1, pus[k] - 1))} disabled={pus[k] <= 1} aria-label={`fewer ${label}`}>−</button>
+                      <strong>{pus[k]}</strong>
+                      <button className="btn small" onClick={() => setPu(k, Math.min(10, pus[k] + 1))} disabled={pus[k] >= 10} aria-label={`more ${label}`}>+</button>
+                    </span>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
+        </div>
         )}
       </div>
 

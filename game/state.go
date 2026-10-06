@@ -24,8 +24,17 @@ type Move struct {
 }
 
 type Mods struct {
-	Negative bool `json:"negative"` // dice may roll negative, moving pieces backwards
-	MaxDie   int  `json:"maxDie"`   // >6 raises max dice value, 0/<=6 = standard d6
+	Negative bool        `json:"negative"` // dice may roll negative, moving pieces backwards
+	MaxDie   int         `json:"maxDie"`   // >6 raises max dice value, 0/<=6 = standard d6
+	Powers   PowerConfig `json:"powers"`   // uses per game per power-up, 0 = disabled
+}
+
+// PowerConfig enables power-ups: reroll a roll, skip a turn, shield blots
+// from capture during the opponent's next turn.
+type PowerConfig struct {
+	Reroll  int `json:"reroll"`
+	Skip    int `json:"skip"`
+	Protect int `json:"protect"`
 }
 
 type Game struct {
@@ -37,9 +46,24 @@ type Game struct {
 	MovesLeft []int   `json:"movesLeft"`
 	HasRolled bool    `json:"hasRolled"`
 	Mods      Mods    `json:"mods"`
+	PowerLeft [2]PowerConfig `json:"powerLeft"`
+	Shield    [2]bool        `json:"shield"`
+	Dealt     int            `json:"dealt"`    // dice dealt by current roll
+	Rerolled  bool           `json:"rerolled"` // roll already rerolled once
 }
 
 func NewGame() *Game { return NewGameWithMods(Mods{}) }
+
+// ponytail: power counts clamp 0..10, lobby UI defaults to 3 when enabled
+func clampPower(n int) int {
+	if n < 0 {
+		return 0
+	}
+	if n > 10 {
+		return 10
+	}
+	return n
+}
 
 // MaxDie reports the highest die face: standard 6 unless mods raise it.
 func (g *Game) MaxDie() int {
@@ -59,12 +83,17 @@ func NewGameWithMods(m Mods) *Game {
 	if m.MaxDie > 20 {
 		m.MaxDie = 20
 	}
+	m.Powers.Reroll = clampPower(m.Powers.Reroll)
+	m.Powers.Skip = clampPower(m.Powers.Skip)
+	m.Powers.Protect = clampPower(m.Powers.Protect)
 	// ponytail: try board config file, fallback to standard
 	if g := tryLoadBoard(); g != nil {
 		g.Mods = m
+		g.PowerLeft = [2]PowerConfig{m.Powers, m.Powers}
 		return g
 	}
 	g := &Game{Turn: White, Mods: m}
+	g.PowerLeft = [2]PowerConfig{m.Powers, m.Powers}
 	// white
 	g.Board[23] = 2
 	g.Board[12] = 5
@@ -141,6 +170,69 @@ func (g *Game) Roll() {
 		g.MovesLeft = []int{d1, d2}
 	}
 	g.HasRolled = true
+	g.Dealt = len(g.MovesLeft)
+	g.Rerolled = false
+}
+
+// SetTurn passes the turn, expiring the incoming player's shield
+// (it protected them through the turn that just ended).
+func (g *Game) SetTurn(p Player) {
+	g.Turn = p
+	g.Shield[p] = false
+}
+
+// UseReroll deals fresh dice: once per roll, before any die is spent.
+func (g *Game) UseReroll(p Player) error {
+	if g.Turn != p {
+		return fmt.Errorf("not your turn")
+	}
+	if !g.HasRolled {
+		return fmt.Errorf("roll first")
+	}
+	if g.Rerolled {
+		return fmt.Errorf("already rerolled this roll")
+	}
+	if len(g.MovesLeft) != g.Dealt {
+		return fmt.Errorf("too late, die already spent")
+	}
+	if g.PowerLeft[p].Reroll <= 0 {
+		return fmt.Errorf("no rerolls left")
+	}
+	g.PowerLeft[p].Reroll--
+	g.Roll()
+	g.Rerolled = true
+	return nil
+}
+
+// UseSkip forfeits the turn (rolled or not).
+func (g *Game) UseSkip(p Player) error {
+	if g.Turn != p {
+		return fmt.Errorf("not your turn")
+	}
+	if g.PowerLeft[p].Skip <= 0 {
+		return fmt.Errorf("no skips left")
+	}
+	g.PowerLeft[p].Skip--
+	g.MovesLeft = nil
+	g.HasRolled = false
+	g.SetTurn(1 - g.Turn)
+	return nil
+}
+
+// UseProtect shields p's blots: they count as made points next turn.
+func (g *Game) UseProtect(p Player) error {
+	if g.Turn != p {
+		return fmt.Errorf("not your turn")
+	}
+	if g.Shield[p] {
+		return fmt.Errorf("already protected")
+	}
+	if g.PowerLeft[p].Protect <= 0 {
+		return fmt.Errorf("no protection left")
+	}
+	g.PowerLeft[p].Protect--
+	g.Shield[p] = true
+	return nil
 }
 
 // direction
@@ -183,7 +275,13 @@ func (g *Game) isBlocked(to int, p Player) bool {
 	}
 	v := g.Board[to]
 	if p == White {
+		if v == -1 && g.Shield[Black] {
+			return true
+		}
 		return v <= -2 // 2+ black block white
+	}
+	if v == 1 && g.Shield[White] {
+		return true
 	}
 	return v >= 2
 }
@@ -336,10 +434,10 @@ func (g *Game) Apply(m Move) error {
 	} else {
 		// hit?
 		v := g.Board[m.To]
-		if p == White && v == -1 {
+		if p == White && v == -1 && !g.Shield[Black] {
 			g.Board[m.To] = 0
 			g.Bar[Black]++
-		} else if p == Black && v == 1 {
+		} else if p == Black && v == 1 && !g.Shield[White] {
 			g.Board[m.To] = 0
 			g.Bar[White]++
 		}

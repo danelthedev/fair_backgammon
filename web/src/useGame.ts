@@ -16,6 +16,9 @@ export type ServerState = {
   rematch?: [boolean, boolean]
   cube?: number
   mods?: { negative?: boolean; maxDie?: number }
+  powerLeft?: [{ reroll: number; skip: number; protect: number }, { reroll: number; skip: number; protect: number }]
+  shield?: [boolean, boolean]
+  rerolled?: boolean
   doubleOffer?: { by: number; stake: number } | null
   doubledThisTurn?: boolean
   vsFly?: boolean
@@ -122,6 +125,9 @@ export function useGame(code: string, username: string) {
             cube: msg.cube ?? 1,
             doubleOffer: msg.doubleOffer ?? null,
             mods: msg.mods ?? {},
+            powerLeft: msg.powerLeft ?? [{ reroll: 0, skip: 0, protect: 0 }, { reroll: 0, skip: 0, protect: 0 }],
+            shield: msg.shield ?? [false, false],
+            rerolled: msg.rerolled ?? false,
             doubledThisTurn: msg.doubledThisTurn ?? false,
             lastDoubler: msg.lastDoubler ?? -1,
             vsFly: msg.vsFly ?? false,
@@ -214,6 +220,9 @@ export function useGame(code: string, username: string) {
   const addMove = (m: Move) => setPending((p) => [...p, m])
   const requestRematch = () => send({ t: 'rematch' })
   const requestResign = () => send({ t: 'resign' })
+  const useReroll = () => send({ t: 'reroll' })
+  const useSkip = () => send({ t: 'skip' })
+  const useProtect = () => send({ t: 'protect' })
   const requestDouble = () => send({ t: 'double' })
   const respondDouble = (action: 'accept' | 'reject' | 'redouble') => send({ t: 'double_response', action })
   const sendGif = (url: string, v?: string) => send(v ? { t: 'gif', url, v } : { t: 'gif', url })
@@ -227,5 +236,5 @@ export function useGame(code: string, username: string) {
   const doubledThisTurn = server?.doubledThisTurn ?? false
   const lastDoubler = server?.lastDoubler ?? -1
 
-  return { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, myIdx, send, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler, brain, gifs, sendGif }
+  return { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, myIdx, send, scores, rematch, requestRematch, requestResign, useReroll, useSkip, useProtect, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler, brain, gifs, sendGif }
 }

@@ -81,7 +81,7 @@ func (r *Room) GameTurn(conn interface {
 		if !g.HasAnyLegal() {
 			g.HasRolled = false
 			g.MovesLeft = nil
-			g.Turn = 1 - g.Turn
+			g.SetTurn(1 - g.Turn)
 			r.DoubledThisTurn = false
 		}
 		r.broadcastStateLocked()
@@ -119,7 +119,7 @@ func (r *Room) GameTurn(conn interface {
 		if turnEnded {
 			g.MovesLeft = nil
 			g.HasRolled = false
-			g.Turn = 1 - g.Turn
+			g.SetTurn(1 - g.Turn)
 			r.DoubledThisTurn = false
 		}
 		r.broadcastStateLocked()
@@ -154,6 +154,41 @@ func (r *Room) GameTurn(conn interface {
 				r.broadcastStateLocked()
 			}
 		}
+	case "reroll":
+		if r.DoubleOffer != nil {
+			sendErr("double offer pending")
+			return
+		}
+		if err := g.UseReroll(game.Player(idx)); err != nil {
+			sendErr(err.Error())
+			return
+		}
+		r.LastMoves = nil
+		if !g.HasAnyLegal() {
+			g.MovesLeft = nil
+			g.HasRolled = false
+			g.SetTurn(1 - g.Turn)
+			r.DoubledThisTurn = false
+		}
+		r.broadcastStateLocked()
+	case "skip":
+		if r.DoubleOffer != nil {
+			sendErr("double offer pending")
+			return
+		}
+		if err := g.UseSkip(game.Player(idx)); err != nil {
+			sendErr(err.Error())
+			return
+		}
+		r.LastMoves = nil
+		r.DoubledThisTurn = false
+		r.broadcastStateLocked()
+	case "protect":
+		if err := g.UseProtect(game.Player(idx)); err != nil {
+			sendErr(err.Error())
+			return
+		}
+		r.broadcastStateLocked()
 	case "pass":
 		if r.DoubleOffer != nil {
 			sendErr("double offer pending")
@@ -166,7 +201,7 @@ func (r *Room) GameTurn(conn interface {
 		r.LastMoves = nil
 		g.MovesLeft = nil
 		g.HasRolled = false
-		g.Turn = 1 - g.Turn
+		g.SetTurn(1 - g.Turn)
 		r.DoubledThisTurn = false
 		r.broadcastStateLocked()
 	case "rematch":
@@ -349,7 +384,7 @@ func (r *Room) broadcastStateLocked() {
 	msg, _ := json.Marshal(map[string]any{
 		"t": "state", "code": r.Code, "board": r.Game.Board, "bar": r.Game.Bar, "off": r.Game.Off,
 		"turn": r.Game.Turn, "dice": r.Game.Dice, "movesLeft": r.Game.MovesLeft, "hasRolled": r.Game.HasRolled, "players": r.Players, "lastMoves": r.LastMoves,
-		"scores": r.Scores, "rematch": r.Rematch, "cube": r.Cube, "doubleOffer": r.DoubleOffer, "doubledThisTurn": r.DoubledThisTurn, "lastDoubler": r.LastDoubler, "mods": r.Game.Mods, "legalMoves": r.Game.LegalMoves(), "vsFly": r.VsFly,
+		"scores": r.Scores, "rematch": r.Rematch, "cube": r.Cube, "doubleOffer": r.DoubleOffer, "doubledThisTurn": r.DoubledThisTurn, "lastDoubler": r.LastDoubler, "mods": r.Game.Mods, "powerLeft": r.Game.PowerLeft, "shield": r.Game.Shield, "rerolled": r.Game.Rerolled, "legalMoves": r.Game.LegalMoves(), "vsFly": r.VsFly,
 	})
 	for ch := range r.subs {
 		select {

@@ -58,7 +58,7 @@ function GifCard({ url, cls, off = 0 }: { url: string; cls: string; off?: number
 }
 
 export function Board({ code, username, onLeave }: { code: string; username: string; onLeave: () => void }) {
-  const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, scores, rematch, requestRematch, requestResign, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler, brain, gifs, sendGif } = useGame(code, username)
+  const { server, local, pending, movesLeft, roll, confirm, undo, addMove, error, winner, winReason, myTurn, scores, rematch, requestRematch, requestResign, useReroll, useSkip, useProtect, connectionError, cube, doubleOffer, requestDouble, respondDouble, doubledThisTurn, lastDoubler, brain, gifs, sendGif } = useGame(code, username)
   const { settings } = useSettings()
   const vol = (settings.volume ?? 100) / 100
   const [selected, setSelected] = useState<number | null>(null)
@@ -74,6 +74,8 @@ export function Board({ code, username, onLeave }: { code: string; username: str
   const [autoRoll, setAutoRoll] = useState(() => { try { return localStorage.getItem('fair_backgammon_autoroll') === '1' } catch { return false } })
   const toggleAutoRoll = () => setAutoRoll(v => { const n = !v; try { localStorage.setItem('fair_backgammon_autoroll', n ? '1' : '0') } catch {} return n })
   const prevHasRolled = useRef(false)
+  const prevDice = useRef('')
+  const prevRerolled = useRef(false)
   const isFirstRollRender = useRef(true)
   const boardRef = useRef<HTMLDivElement>(null)
   const prevServer = useRef<typeof server>(null)
@@ -93,16 +95,24 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     if (isFirstRollRender.current) {
       isFirstRollRender.current = false
       prevHasRolled.current = !!server?.hasRolled
+      prevDice.current = JSON.stringify(server?.dice ?? [])
+      prevRerolled.current = !!server?.rerolled
       setRolling(false)
       return
     }
-    if (server?.hasRolled && !prevHasRolled.current) sfx.dice()
+    // ponytail: reroll keeps hasRolled — dice or rerolled flag changing re-fires anim
+    const diceKey = JSON.stringify(server?.dice ?? [])
+    const fresh = !!server?.hasRolled && (!prevHasRolled.current || diceKey !== prevDice.current || (!!server?.rerolled && !prevRerolled.current))
+    if (fresh) sfx.dice()
     prevHasRolled.current = !!server?.hasRolled
+    prevDice.current = diceKey
+    prevRerolled.current = !!server?.rerolled
     if (!server?.hasRolled) { setRolling(false); return }
+    if (!fresh) return
     setRolling(true)
     const t = setTimeout(() => setRolling(false), 600)
     return () => clearTimeout(t)
-  }, [server?.hasRolled])
+  }, [server?.hasRolled, server?.dice, server?.rerolled])
   // ponytail: auto-roll fires once per turn start, delayed so double stays possible
   useEffect(() => {
     if (!autoRoll || !myTurn || winner || !server || server.hasRolled || rolling || animating || doubleOffer || !(server.players[0] && server.players[1])) return
@@ -339,10 +349,17 @@ export function Board({ code, username, onLeave }: { code: string; username: str
     if (p === 0) return board.slice(6).every(v => v <= 0)
     return board.slice(0, 18).every(v => v >= 0)
   }
+  const shield = (server?.shield ?? [false, false]) as [boolean, boolean]
   const isBlocked = (to: number, p: number, board: number[]) => {
     if (to < 0 || to >= 24) return false
     const v = board[to]
-    return p === 0 ? v <= -2 : v >= 2
+    // ponytail: shielded blots count as made points
+    if (p === 0) {
+      if (v === -1 && shield[1]) return true
+      return v <= -2
+    }
+    if (v === 1 && shield[0]) return true
+    return v >= 2
   }
   const isLegal = (from: number, to: number, die: number) => {
     if (!server.hasRolled) return false
@@ -487,7 +504,12 @@ export function Board({ code, username, onLeave }: { code: string; username: str
               const blocked = (() => {
                 if (to < 0 || to >= 24) return false
                 const v = curBoard[to]
-                return myIdx === 0 ? v <= -2 : v >= 2
+                if (myIdx === 0) {
+                  if (v === -1 && shield[1]) return true
+                  return v <= -2
+                }
+                if (v === 1 && shield[0]) return true
+                return v >= 2
               })()
               if (blocked) return false
               return true
@@ -724,7 +746,8 @@ export function Board({ code, username, onLeave }: { code: string; username: str
               if (top) (s as any).marginTop = `${gap}px`
               else (s as any).marginBottom = `${gap}px`
             }
-            return <div key={i} className={`checker ${isWhite ? 'white' : 'black'}`} style={s} />
+            const shielded = i === 0 && abs === 1 && ((isWhite && shield[0]) || (!isWhite && shield[1]))
+              return <div key={i} className={`checker ${isWhite ? 'white' : 'black'}${shielded ? ' shielded' : ''}`} style={s} />
           })}
         </div>
       </div>
@@ -890,8 +913,44 @@ export function Board({ code, username, onLeave }: { code: string; username: str
             <button className="btn primary large" onClick={confirm} style={{ marginTop: 10 }}>Confirm</button>
           )}
           {!winner && (
-            <div className={`autoRoll ${autoRoll ? 'active' : ''}`} onClick={toggleAutoRoll} title="Roll automatically at turn start">
-              Auto-roll
+            <div className="powerWrap">
+              {myTurn && ((server.powerLeft?.[myIdx]?.reroll ?? 0) > 0 || (server.powerLeft?.[myIdx]?.skip ?? 0) > 0 || (server.powerLeft?.[myIdx]?.protect ?? 0) > 0) && (
+                <div className="powerCol">
+                  {(server.powerLeft?.[myIdx]?.reroll ?? 0) > 0 && (
+                    <button
+                      className="btn small powerBtn"
+                      disabled={!(server.hasRolled && !server.rerolled && pending.length === 0 && movesLeft.length === (server.dice[0] === server.dice[1] ? 4 : 2))}
+                      onClick={useReroll}
+                      title="Fresh dice — once per roll, before spending a die"
+                    >
+                      Reroll · {server.powerLeft?.[myIdx]?.reroll}
+                    </button>
+                  )}
+                  {(server.powerLeft?.[myIdx]?.skip ?? 0) > 0 && (
+                    <button
+                      className="btn small powerBtn"
+                      disabled={pending.length > 0}
+                      onClick={useSkip}
+                      title="Forfeit this turn"
+                    >
+                      Skip · {server.powerLeft?.[myIdx]?.skip}
+                    </button>
+                  )}
+                  {(server.powerLeft?.[myIdx]?.protect ?? 0) > 0 && (
+                    <button
+                      className={`btn small powerBtn ${shield[myIdx] ? 'active' : ''}`}
+                      disabled={shield[myIdx]}
+                      onClick={useProtect}
+                      title="Your blots can't be captured during the opponent's next turn"
+                    >
+                      Shield · {server.powerLeft?.[myIdx]?.protect}
+                    </button>
+                  )}
+                </div>
+              )}
+              <div className={`autoRoll ${autoRoll ? 'active' : ''}`} onClick={toggleAutoRoll} title="Roll automatically at turn start">
+                Auto-roll
+              </div>
             </div>
           )}
         </div>

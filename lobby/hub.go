@@ -181,6 +181,9 @@ func (r *Room) BroadcastState() {
 		"vsFly":           r.VsFly,
 		"doubledThisTurn": r.DoubledThisTurn,
 		"lastDoubler":     r.LastDoubler,
+		"powerLeft":       r.Game.PowerLeft,
+		"shield":          r.Game.Shield,
+		"rerolled":        r.Game.Rerolled,
 		"mods":            r.Game.Mods,
 		"legalMoves":      r.Game.LegalMoves(),
 	})

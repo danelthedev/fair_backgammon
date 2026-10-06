@@ -4,10 +4,16 @@ export function allInHome(board: number[], bar: number[], p: number) {
   if (p === 0) return board.slice(6).every(v => v <= 0)
   return board.slice(0, 18).every(v => v >= 0)
 }
-export function isBlocked(to: number, p: number, board: number[]) {
+export function isBlocked(to: number, p: number, board: number[], shield?: boolean[] | null) {
   if (to < 0 || to >= 24) return false
   const v = board[to]
-  return p === 0 ? v <= -2 : v >= 2
+  // ponytail: shielded blots count as made points
+  if (p === 0) {
+    if (v === -1 && shield?.[1]) return true
+    return v <= -2
+  }
+  if (v === 1 && shield?.[0]) return true
+  return v >= 2
 }
 export function isLegal(
   board: number[],
@@ -17,7 +23,8 @@ export function isLegal(
   die: number,
   movesLeft: number[],
   hasRolled: boolean,
-  turn: number
+  turn: number,
+  shield?: boolean[] | null
 ) {
   if (!hasRolled) return false
   if (!movesLeft.includes(die)) return false
@@ -52,16 +59,16 @@ export function isLegal(
     const expected = turn === 0 ? from - to : to - from
     if (expected !== die) return false
   }
-  if (isBlocked(to, turn, board)) return false
+  if (isBlocked(to, turn, board, shield)) return false
   return true
 }
-export function hasAnyLegal(board: number[], bar: number[], movesLeft: number[], hasRolled: boolean, turn: number) {
+export function hasAnyLegal(board: number[], bar: number[], movesLeft: number[], hasRolled: boolean, turn: number, shield?: boolean[] | null) {
   for (const d of movesLeft) {
     for (let from = -1; from < 24; from++) {
       if (from === -1 && bar[turn] === 0) continue
       for (let to = -2; to < 24; to++) {
         if (to === -1) continue
-        if (isLegal(board, bar, from, to, d, movesLeft, hasRolled, turn)) return true
+        if (isLegal(board, bar, from, to, d, movesLeft, hasRolled, turn, shield)) return true
       }
     }
   }
