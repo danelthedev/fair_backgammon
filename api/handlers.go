@@ -19,8 +19,8 @@ func usernameFromCookie(r *http.Request) string {
 }
 
 // ponytail: one-liner converts lobby mods JSON to game.Mods
-func gameMods(negative bool, maxDie int, noDouble4x bool, negPct int, allowZero bool, reroll, skip, protect int) game.Mods {
-	return game.Mods{Negative: negative, MaxDie: maxDie, NoDouble4x: noDouble4x, NegPct: negPct, AllowZero: allowZero, Powers: game.PowerConfig{Reroll: reroll, Skip: skip, Protect: protect}}
+func gameMods(negative bool, maxDie int, noDouble4x bool, negPct int, allowZero bool, noMart bool, reroll, skip, protect int) game.Mods {
+	return game.Mods{Negative: negative, MaxDie: maxDie, NoDouble4x: noDouble4x, NegPct: negPct, AllowZero: allowZero, NoMart: noMart, Powers: game.PowerConfig{Reroll: reroll, Skip: skip, Protect: protect}}
 }
 func HandleSession(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
@@ -65,6 +65,7 @@ func HandleCreateLobby(hub *lobby.Hub) http.HandlerFunc {
 			Negative   bool `json:"negative"`
 			MaxDie     int  `json:"maxDie"`
 			NoDouble4x bool `json:"noDouble4x"`
+			NoMart     bool `json:"noMart"`
 			AllowZero  bool `json:"allowZero"`
 			NegPct     int  `json:"negPct"`
 			Powers     struct {
@@ -81,7 +82,7 @@ func HandleCreateLobby(hub *lobby.Hub) http.HandlerFunc {
 		if body.MaxDie > 20 {
 			body.MaxDie = 20
 		}
-		room := hub.Create(user, gameMods(body.Negative, body.MaxDie, body.NoDouble4x, body.NegPct, body.AllowZero, body.Powers.Reroll, body.Powers.Skip, body.Powers.Protect))
+		room := hub.Create(user, gameMods(body.Negative, body.MaxDie, body.NoDouble4x, body.NegPct, body.AllowZero, body.NoMart, body.Powers.Reroll, body.Powers.Skip, body.Powers.Protect))
 		if body.Layout != nil {
 			if err := room.Game.ApplyLayout(*body.Layout); err != nil {
 				http.Error(w, "bad layout: "+err.Error(), 400)
@@ -185,12 +186,8 @@ func HandleLeaveLobby(hub *lobby.Hub) http.HandlerFunc {
 	}
 }
 
-// FlySpawn launches the bot player for a room. Set by main (env FLY_BOT).
-// Returning error aborts room creation with 500.
-var FlySpawn func(code, botname, variant string) error
 
 // FlyLocal seats an in-process bot. Set by main when fly.json loads.
-// Takes precedence over FlySpawn.
 var FlyLocal func(hub *lobby.Hub, room *lobby.Room, botname, variant string)
 
 func HandleCreateVsFly(hub *lobby.Hub) http.HandlerFunc {
@@ -220,20 +217,13 @@ func HandleCreateVsFly(hub *lobby.Hub) http.HandlerFunc {
 			return
 		}
 		resolved := variant
-		if FlyLocal == nil && FlySpawn == nil {
+		if FlyLocal == nil {
 			http.Error(w, "fly not configured", 501)
 			return
 		}
 		room := hub.CreateVsFly(user, botname)
 		room.BotVariant = resolved
-		if FlyLocal != nil {
-			go FlyLocal(hub, room, botname, resolved)
-		} else if FlySpawn != nil {
-			if err := FlySpawn(room.Code, botname, resolved); err != nil {
-				http.Error(w, "fly unavailable: "+err.Error(), 500)
-				return
-			}
-		}
+		go FlyLocal(hub, room, botname, resolved)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"code": room.Code})
 	}

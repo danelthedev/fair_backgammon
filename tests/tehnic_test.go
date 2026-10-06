@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fair_backgammon/game"
 	"fair_backgammon/lobby"
 	"testing"
 )
@@ -100,6 +101,27 @@ func TestTehnicNotMidTurn(t *testing.T) {
 	r.GameTurn(mc, nil, "", 0, turnMsg{T: "move", From: &from, To: &to, Die: &die})
 	if r.Scores[0] != 0 || r.Game.Off[0] != 4 {
 		t.Fatalf("broken pattern must not win: scores=%v off=%v", r.Scores, r.Game.Off)
+	}
+	if r.Game.Turn != 1 {
+		t.Fatalf("turn should pass, got %v", r.Game.Turn)
+	}
+}
+
+func TestTehnicDisabledByNoMart(t *testing.T) {
+	h := lobby.NewHub()
+	r := h.Create("alice", game.Mods{NoMart: true})
+	h.Join(r.Code, "bob")
+	r.Game.Board = [24]int{2, 2, 2, 2, 2, 1, 1}
+	r.Game.Bar = [2]int{}
+	r.Game.Off = [2]int{3, 0}
+	r.Game.Turn = 0
+	r.Game.HasRolled = true
+	r.Game.MovesLeft = []int{1}
+	mc := &mockConn{}
+	from, to, die := 6, 5, 1
+	r.GameTurn(mc, nil, "", 0, turnMsg{T: "move", From: &from, To: &to, Die: &die})
+	if r.Scores[0] != 0 || r.Game.Off[0] != 3 {
+		t.Fatalf("noMart must suppress tehnic: scores=%v off=%v", r.Scores, r.Game.Off)
 	}
 	if r.Game.Turn != 1 {
 		t.Fatalf("turn should pass, got %v", r.Game.Turn)

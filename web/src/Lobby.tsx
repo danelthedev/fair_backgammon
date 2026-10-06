@@ -20,6 +20,7 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
   const [bigDice, setBigDice] = useState(false)
   const [noDouble4x, setNoDouble4x] = useState(false)
   const [allowZero, setAllowZero] = useState(false)
+  const [mart, setMart] = useState(true)
   const [maxDie, setMaxDie] = useState(9)
   // ponytail: 0 = power-up off, else uses per game
   const [pus, setPus] = useState({ reroll: 0, skip: 0, protect: 0 })
@@ -42,7 +43,7 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
     try {
       await ensureUser()
       const sel = layouts.find(l => l.name === layoutSel)
-      const c = await createLobby({ negative, negPct: negative ? negPct : 0, maxDie: bigDice ? maxDie : 0, noDouble4x, allowZero, powers: { ...pus }, layout: sel ? { board: sel.board, bar: sel.bar, off: sel.off, turn: sel.turn } : undefined })
+      const c = await createLobby({ negative, negPct: negative ? negPct : 0, maxDie: bigDice ? maxDie : 0, noDouble4x, allowZero, noMart: !mart, powers: { ...pus }, layout: sel ? { board: sel.board, bar: sel.bar, off: sel.off, turn: sel.turn } : undefined })
       setCreated(c)
       setErr(null)
       onEnter(c, user.trim())
@@ -124,6 +125,16 @@ export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => vo
                 </select>
                 <button className="btn" onClick={() => setEditorOpen(true)}>Boards…</button>
               </div>
+            </div>
+            <div className="modsGroup">
+              <div className="modsGroupTitle">Rules</div>
+            <label className={`modsOpt ${mart ? 'on' : ''}`}>
+              <input type="checkbox" checked={mart} onChange={e => setMart(e.target.checked)} />
+              <span>
+                <strong>Romanian mart tehnic</strong>
+                <small>six points of 2 or six of 1 wins double instantly</small>
+              </span>
+            </label>
             </div>
             <div className="modsGroup">
               <div className="modsGroupTitle">Dice</div>

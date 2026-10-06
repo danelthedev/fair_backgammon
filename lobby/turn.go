@@ -137,7 +137,7 @@ func (r *Room) GameTurn(conn interface {
 			}
 			r.broadcastStateLocked()
 		}
-		if turnEnded {
+		if turnEnded && !g.Mods.NoMart {
 			if ok, mult := g.CheckTechnicalWin(game.Player(idx)); ok {
 				wp := game.Player(idx)
 				r.Scores[wp] += mult * r.Stake()

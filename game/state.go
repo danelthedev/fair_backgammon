@@ -28,6 +28,7 @@ type Mods struct {
 	NegPct     int         `json:"negPct"`     // % chance per die to flip negative (default 33)
 	AllowZero bool        `json:"allowZero"` // dice may roll 0 (dead die)
 	NoDouble4x bool        `json:"noDouble4x"` // doubles play 2 dice, not 4
+	NoMart     bool        `json:"noMart"`     // opt-out: marț tehnic instant win disabled
 	MaxDie     int         `json:"maxDie"`     // >6 raises max dice value, 0/<=6 = standard d6
 	Powers     PowerConfig `json:"powers"`     // uses per game per power-up, 0 = disabled
 }

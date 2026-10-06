@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -241,26 +240,6 @@ func main() {
 		log.Printf("engine data unavailable (%v), engine bots play random", err)
 	} else {
 		log.Print("engine ready (easy/medium/hard)")
-	}
-	flyBot, flyWeights := os.Getenv("FLY_BOT"), os.Getenv("FLY_W_TRAINED")
-	if flyBot != "" {
-		flyURL := os.Getenv("FLY_URL")
-		if flyURL == "" {
-			flyURL = "http://localhost:" + port
-		}
-		api.FlySpawn = func(code, botname, variant string) error {
-			parts := strings.Fields(flyBot)
-			args := append(append([]string{}, parts[1:]...), "--join", code, "--name", botname, "--url", flyURL)
-			if flyWeights != "" {
-				args = append(args, "--w", flyWeights)
-			}
-			cmd := exec.Command(parts[0], args...)
-			if f, err := os.OpenFile("/tmp/musca-fly.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); err == nil {
-				cmd.Stdout, cmd.Stderr = f, f
-			}
-			log.Printf("fly spawn %s variant=%s code=%s", botname, variant, code)
-			return cmd.Start()
-		}
 	}
 	log.Println("listening :" + port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
