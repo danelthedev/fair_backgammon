@@ -4,7 +4,8 @@ import { LayoutEditor, loadLayouts, type SavedLayout } from './LayoutEditor'
 
 // Bot registry: add future bots here; the dropdown renders from this list.
 const BOTS = [
-  { id: 'retarded', label: 'Fruit Fly Brain' },
+  { id: 'retarded', label: 'Fruit Fly Bot' },
+  { id: 'hard', label: 'Hard Bot' },
 ]
 
 export function Lobby({ onEnter }: { onEnter: (code: string, user: string) => void }) {

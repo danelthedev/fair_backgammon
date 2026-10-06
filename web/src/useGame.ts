@@ -24,6 +24,7 @@ export type ServerState = {
   doubleOffer?: { by: number; stake: number } | null
   doubledThisTurn?: boolean
   vsFly?: boolean
+  botVariant?: string
   lastDoubler?: number
 }
 
@@ -135,6 +136,7 @@ export function useGame(code: string, username: string) {
             doubledThisTurn: msg.doubledThisTurn ?? false,
             lastDoubler: msg.lastDoubler ?? -1,
             vsFly: msg.vsFly ?? false,
+            botVariant: msg.botVariant ?? '',
           })
           clearTimeout(timeout)
           setConnectionError(null)

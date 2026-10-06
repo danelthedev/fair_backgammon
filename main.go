@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"fair_backgammon/api"
+	"fair_backgammon/engine"
 	"fair_backgammon/fly"
 	"fair_backgammon/lobby"
 
@@ -225,7 +226,9 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-	// Play-vs-Fly: in-process bot when fly.json loads, else python subprocess.
+	// Play-vs-bot: fly head + gnubg engine rungs, both in-process.
+	// ponytail: engine weights (~9MB) load once; bot games degrade to
+	// random legal if data is missing.
 	if heads, err := fly.Load(); err != nil {
 		log.Printf("fly data unavailable (%v), subprocess fallback", err)
 	} else {
@@ -233,6 +236,11 @@ func main() {
 		api.FlyLocal = func(hub *lobby.Hub, room *lobby.Room, botname, variant string) {
 			fly.Play(hub, room.Code, botname, variant, heads)
 		}
+	}
+	if err := engine.Ensure(); err != nil {
+		log.Printf("engine data unavailable (%v), engine bots play random", err)
+	} else {
+		log.Print("engine ready (easy/medium/hard)")
 	}
 	flyBot, flyWeights := os.Getenv("FLY_BOT"), os.Getenv("FLY_W_TRAINED")
 	if flyBot != "" {

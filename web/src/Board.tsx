@@ -830,7 +830,7 @@ export function Board({ code, username, onLeave }: { code: string; username: str
         </div>
       </div>
       <div className="boardRow">
-        {server?.vsFly && (<div className="brainSide"><BrainPanel frame={brain} /></div>)}
+        {server?.vsFly && server?.botVariant === 'retarded' && (<div className="brainSide"><BrainPanel frame={brain} /></div>)}
         <div className="board" ref={boardRef} onContextMenu={e => e.preventDefault()} style={animating ? { pointerEvents: 'none' } : undefined}>
           <div className="half left">
             <div className="row top">{topLeft.map(i => renderPoint(i, true))}</div>

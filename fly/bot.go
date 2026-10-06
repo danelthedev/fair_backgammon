@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"time"
 
+	"fair_backgammon/engine"
 	"fair_backgammon/game"
 	"fair_backgammon/lobby"
 )
@@ -41,6 +42,32 @@ type stateMsg struct {
 
 // Play occupies the bot seat until the human leaves. Color follows Players
 // (rematch swaps); rematch auto-accepted; room released on exit.
+// engineDiffs maps bot variants to gnubg difficulty. Absent = fly head.
+var engineDiffs = map[string]engine.Difficulty{
+	"easy":   engine.Easy,
+	"medium": engine.Medium,
+	"hard":   engine.Hard,
+}
+
+// planEngineTurn scores full-turn plays once per roll and maps the pick onto
+// game moves. Nil = fall back to random legal (server still validates).
+func planEngineTurn(st stateMsg, diff engine.Difficulty, rng *rand.Rand) []game.Move {
+	if len(st.MovesLeft) < 2 {
+		return nil
+	}
+	g := &game.Game{Board: st.Board, Bar: st.Bar, Off: st.Off,
+		Turn: game.Player(st.Turn), MovesLeft: append([]int(nil), st.MovesLeft...), HasRolled: true}
+	plays, err := engine.Plays(st.Board, st.Bar, game.Player(st.Turn),
+		[2]int{st.MovesLeft[0], st.MovesLeft[1]}, diff)
+	if err != nil || len(plays) == 0 {
+		return nil
+	}
+	mv, err := engine.ToGameMoves(g, engine.PickPlay(plays, diff.TopN, rng).Steps)
+	if err != nil {
+		return nil
+	}
+	return mv
+}
 func Play(hub *lobby.Hub, code, botname, variant string, heads map[string]*Head) {
 	h := heads[variant]
 	if h == nil {
@@ -70,6 +97,7 @@ func Play(hub *lobby.Hub, code, botname, variant string, heads map[string]*Head)
 	defer hub.Leave(code, botname)
 	var dc discarder
 	last, rematched, justRolled := "", false, false
+	var queue []game.Move // engine full-turn plan, popped one per update
 	pace := func() { time.Sleep(150 * time.Millisecond) }
 	// liveness: forward broadcasts; every 20s idle re-request server truth
 	// (nil = nudge) so a missed broadcast can never stall the seat.
@@ -123,6 +151,9 @@ func Play(hub *lobby.Hub, code, botname, variant string, heads map[string]*Head)
 		}
 		switch base.T {
 		case "gif":
+			if _, ok := engineDiffs[variant]; ok {
+				continue // engine bots never reply in kind
+			}
 			// ponytail: human taunts the fly, fly answers in kind (no rate war:
 			// humans are already limited to 1 gif per 3s server-side)
 			var gm struct {
@@ -148,6 +179,7 @@ func Play(hub *lobby.Hub, code, botname, variant string, heads map[string]*Head)
 				rematched = true
 			}
 			last = ""
+			queue = nil
 			continue
 		case "state":
 		default:
@@ -193,14 +225,28 @@ func Play(hub *lobby.Hub, code, botname, variant string, heads map[string]*Head)
 				time.Sleep(900 * time.Millisecond)
 				justRolled = false
 			}
-			// Pure fly: every variant decides 1-ply. Lookahead search lives only
-			// as offline training scaffolding in musca; never called live.
-			m := Choose(h, w, st.Board, st.Bar, st.Off, st.Turn, st.LegalMoves, rng)
-			LogActivity(h, w, variant, st.Board, st.Bar, st.Off, st.Turn, m)
-			if firstMove {
-				BroadcastActivity(h, w, variant, room, st.Board, st.Bar, st.Off, st.Turn, m)
-				// Think-first: the panel wave (~2s) plays before the move lands.
-				time.Sleep(2000 * time.Millisecond)
+			// Engine bots plan the whole turn once (gnubg scores full plays);
+			// fly picks die-by-die with its 1-ply value head.
+			var m game.Move
+			if diff, ok := engineDiffs[variant]; ok {
+				if firstMove {
+					queue = planEngineTurn(st, diff, rng)
+					// Think-first: same ~2s beat as the brain panel.
+					time.Sleep(2000 * time.Millisecond)
+				}
+				if len(queue) > 0 {
+					m, queue = queue[0], queue[1:]
+				} else {
+					m = st.LegalMoves[rng.Intn(len(st.LegalMoves))]
+				}
+			} else {
+				m = Choose(h, w, st.Board, st.Bar, st.Off, st.Turn, st.LegalMoves, rng)
+				LogActivity(h, w, variant, st.Board, st.Bar, st.Off, st.Turn, m)
+				if firstMove {
+					BroadcastActivity(h, w, variant, room, st.Board, st.Bar, st.Off, st.Turn, m)
+					// Think-first: the panel wave (~2s) plays before the move lands.
+					time.Sleep(2000 * time.Millisecond)
+				}
 			}
 			room.GameTurn(dc, nil, "", idx, turnMsg{T: "move", From: &m.From, To: &m.To, Die: &m.Die})
 		}

@@ -26,6 +26,7 @@ type Room struct {
 	DoubledThisTurn bool
 	LastDoubler     int
 	VsFly           bool         // bot game: doubling disabled, bot plays a seat
+	BotVariant      string       // bot id: retarded (fly brain) | hard
 	Layout          *game.Layout // custom starting position, re-applied on rematch
 	Hotseat         bool         // both seats local, mover acts for turn seat
 	gifLast         [2]int64     // unix nanos of last gif per seat, rate-limit
@@ -191,6 +192,7 @@ func (r *Room) BroadcastState() {
 		"cube":            r.Cube,
 		"doubleOffer":     r.DoubleOffer,
 		"vsFly":           r.VsFly,
+		"botVariant":      r.BotVariant,
 		"doubledThisTurn": r.DoubledThisTurn,
 		"lastDoubler":     r.LastDoubler,
 		"powerLeft":       r.Game.PowerLeft,

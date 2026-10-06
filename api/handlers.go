@@ -208,8 +208,8 @@ func HandleCreateVsFly(hub *lobby.Hub) http.HandlerFunc {
 			Variant string `json:"variant"`
 		}
 		_ = json.NewDecoder(r.Body).Decode(&body)
-		// Single bot: id stays 'retarded' (fly weight key), display name is Fruit Fly Brain.
-		botNames := map[string]string{"retarded": "Fruit Fly Brain"}
+		// Single bot: id stays 'retarded' (fly weight key), display name is Fruit Fly Bot.
+		botNames := map[string]string{"retarded": "Fruit Fly Bot", "hard": "Hard Bot"}
 		variant := body.Variant
 		if variant == "" {
 			variant = "retarded"
@@ -225,6 +225,7 @@ func HandleCreateVsFly(hub *lobby.Hub) http.HandlerFunc {
 			return
 		}
 		room := hub.CreateVsFly(user, botname)
+		room.BotVariant = resolved
 		if FlyLocal != nil {
 			go FlyLocal(hub, room, botname, resolved)
 		} else if FlySpawn != nil {
